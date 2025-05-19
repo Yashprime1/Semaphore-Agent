@@ -14,8 +14,8 @@ jobs:
         id: generate-github-token
         uses: tibdex/github-app-token@v2.1.0
         with:
-          app_id: ${{ secrets.CLEVERTAP_SNE_BOT_ID }}
-          private_key: ${{ secrets.CLEVERTAP_SNE_BOT_PRIVATE_ACCESS_KEY }}
+          app_id: ${{ secrets.DUMMY_BOT_ID }}
+          private_key: ${{ secrets.DUMMY_BOT_PRIVATE_ACCESS_KEY }}
 
       - name: Download asset
         uses: robinraju/release-downloader@v1.11
