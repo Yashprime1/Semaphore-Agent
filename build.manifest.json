@@ -36,8 +36,8 @@
           "TemplatePath": "templates/network/network.json",
           "Parameters": {
             "VPCNetworkPrefix": "10.4",
-            "NatInstanceAmiId": "ami-0cb29d27de4267690",
-            "NatInstanceType": "c7gn.xlarge"
+            "NatInstanceAmiId": "ami-0f9f15428c9ec17db",
+            "NatInstanceType": "c7gn.large"
           },
           "StackPolicy": {}
         },
