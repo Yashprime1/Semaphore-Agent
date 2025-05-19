@@ -25,7 +25,7 @@ jobs:
           packer validate semaphore-agent-ami/ultron/packer-ultron-semaphore-agent.json
         env:
           BUILD_INSTANCE_TYPE: t2.micro
-          BUILD_SOURCE_IMAGE_NAME: semaphore-agent-13619700254-v0.4.0-ubuntu-focal-x86_64-c6a7b62f0ac8886b16898d407678b356
+          BUILD_SOURCE_IMAGE_NAME: semaphore-agent-15112321221-v0.4.0-ubuntu-focal-x86_64-c6a7b62f0ac8886b16898d407678b356
           AWS_MAX_ATTEMPTS: 300
           AWS_POLL_DELAY_SECONDS: 30
           AWS_REGION: eu-west-1
@@ -36,7 +36,7 @@ jobs:
           packer build semaphore-agent-ami/ultron/packer-ultron-semaphore-agent.json
         env:
           BUILD_INSTANCE_TYPE: t2.micro
-          BUILD_SOURCE_IMAGE_NAME: semaphore-agent-13619700254-v0.4.0-ubuntu-focal-x86_64-c6a7b62f0ac8886b16898d407678b356
+          BUILD_SOURCE_IMAGE_NAME: semaphore-agent-15112321221-v0.4.0-ubuntu-focal-x86_64-c6a7b62f0ac8886b16898d407678b356
           AWS_MAX_ATTEMPTS: 300
           AWS_POLL_DELAY_SECONDS: 30
           AWS_REGION: eu-west-1
