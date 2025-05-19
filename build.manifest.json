@@ -96,7 +96,7 @@
             "CloudWatchLogRetention-CustomResource"
           ],
           "Parameters": {
-            "GitHubSshKeyFingerprintSyncLambdaCodeS3Key": "lambda/github-ssh-key-fingerprint-synchronizer/e5688de6-fb72-4f1d-a1fb-ddc5d57c41ca.zip",
+            "GitHubSshKeyFingerprintSyncLambdaCodeS3Key": "lambda/github-ssh-key-fingerprint-synchronizer/f735cc64-e851-4ae8-a480-8d0a64e088ca.zip",
             "GithubPublicSshKeyFingerprint": "[\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl\",\"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=\",\"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=\"]"
           },
           "StackPolicy": {}
@@ -110,7 +110,7 @@
             "CloudWatchLogRetention-CustomResource"
           ],
           "Parameters": {
-            "AzReBalanceSuspenderLambdaCodeS3Key": "lambda/az-rebalance-suspender/dcb1bf17-7f9a-404d-8f86-a8ed4f8a2b43.zip",
+            "AzReBalanceSuspenderLambdaCodeS3Key": "lambda/az-rebalance-suspender/a3235f0c-2fbb-402b-aae0-10cd6854b909.zip",
             "AzReBalanceSuspenderProviderFrameworkOnEventLambdaCodeS3Key": "lambda/custom-resources-provider-framework/d1c1d2d8-6cc2-46e9-918e-66f77cff91c0.zip"
           },
           "StackPolicy": {}
