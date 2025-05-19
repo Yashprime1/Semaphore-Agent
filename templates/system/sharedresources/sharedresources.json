@@ -1,0 +1,324 @@
+{
+  "Resources": {
+    "SsmS3Bucket": {
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      },
+      "Type": "AWS::S3::Bucket"
+    },
+    "SemaphoreCachingS3Bucket": {
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      },
+      "Type": "AWS::S3::Bucket"
+    },
+    "PackerEc2InstanceIamRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/",
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "PackerEc2InstanceIamRole"
+            ]
+          ]
+        }
+      }
+    },
+    "PackerEc2InstanceIamPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "PackerEc2InstanceIamPolicy"
+            ]
+          ]
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetObject",
+                "s3:GetObjectAcl",
+                "s3:GetBucketLocation",
+                "s3:ListObjects",
+                "s3:ListObjectsV2",
+                "s3:ListBucket"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "SsmS3Bucket",
+                    "Arn"
+                  ]
+                }
+              ],
+              "Sid": "AllowSSMS3BucketAccess"
+            },
+            {
+              "Sid": "WriteLogsToCloudWatchLogs",
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowSSMAgentToFunction",
+              "Effect": "Allow",
+              "Action": [
+                "ssm:DescribeAssociation",
+                "ssm:GetDeployablePatchSnapshotForInstance",
+                "ssm:GetDocument",
+                "ssm:GetManifest",
+                "ssm:GetParameters",
+                "ssm:ListAssociations",
+                "ssm:ListInstanceAssociations",
+                "ssm:PutInventory",
+                "ssm:PutComplianceItems",
+                "ssm:PutConfigurePackageResult",
+                "ssm:UpdateAssociationStatus",
+                "ssm:UpdateInstanceAssociationStatus",
+                "ssm:UpdateInstanceInformation"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowSsmAgentToCommunicateWithSystemsManagerApiService",
+              "Effect": "Allow",
+              "Action": [
+                "ec2messages:AcknowledgeMessage",
+                "ec2messages:DeleteMessage",
+                "ec2messages:FailMessage",
+                "ec2messages:GetEndpoint",
+                "ec2messages:GetMessages",
+                "ec2messages:SendReply"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowSsmManagerToBeAbleToDescribeInstanceStatus",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:DescribeInstanceStatus"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowAccessToCloudwatchLogs",
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowSsmAgentToPutLogsToS3",
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:AbortMultipartUpload",
+                "s3:ListMultipartUploadParts",
+                "s3:ListBucket",
+                "s3:ListBucketMultipartUploads"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowSSMAgentToGetKMSGeneratedDataKeyWhenAccessingS3Bucket",
+              "Effect": "Allow",
+              "Action": [
+                "kms:GenerateDataKey",
+                "kms:Decrypt"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowSsmAgentToPushAndDeleteObjectFromS3",
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObjects",
+                "s3:AbortMultipartUpload",
+                "s3:ListMultipartUploadParts",
+                "s3:ListBucket",
+                "s3:ListBucketMultipartUploads",
+                "s3:GetBucketLocation",
+                "s3:ListObjectsV2"
+              ],
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "SsmS3Bucket",
+                    "Arn"
+                  ]
+                }
+              ]
+            },
+            {
+              "Sid": "AllowTwoWayWebsocketChannelComminicationBetweenTheClientBrowserOrCliAndRemoteManagedInstance",
+              "Effect": "Allow",
+              "Action": [
+                "ssmmessages:*",
+                "ssm:UpdateInstanceInformation"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowSsmToGetS3EncryptionConfiguration",
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetEncryptionConfiguration"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowBootstrapViaCloudInitToBeAbleToDescribeTags",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:DescribeTags"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowPackerInstanceToCreateTags",
+              "Effect": "Allow",
+              "Action": "ec2:CreateTags",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    ":",
+                    [
+                      "arn:aws:ec2",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      "instance/*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "PackerEc2InstanceIamRole"
+          }
+        ]
+      }
+    },
+    "PackerEc2InstanceIamProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "PackerEc2InstanceIamRole"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "SsmS3BucketArn": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-SsmS3BucketArn"
+        }
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "SsmS3Bucket",
+          "Arn"
+        ]
+      }
+    },
+    "SemaphoreCachingS3BucketName": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-SemaphoreCachingS3BucketName"
+        }
+      },
+      "Value": {
+        "Ref": "SemaphoreCachingS3Bucket"
+      }
+    },
+    "SemaphoreCachingS3BucketArn": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-SemaphoreCachingS3BucketArn"
+        }
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "SemaphoreCachingS3Bucket",
+          "Arn"
+        ]
+      }
+    }
+  }
+}

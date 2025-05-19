@@ -1,0 +1,812 @@
+{
+  "Resources": {
+    "GithubActionsCleverTapSNEInspecIamGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+        "GroupName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "GithubActionsForInspec"
+            ]
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "GithubActionsForInspecPolicy"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Sid": "AddPermissionToCreateAndDeleteStack",
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudformation:CreateStack",
+                    "cloudformation:DeleteStack",
+                    "cloudformation:DescribeStacks",
+                    "cloudformation:DescribeStackResource",
+                    "cloudformation:UpdateStack",
+                    "cloudformation:CreateChangeSet",
+                    "cloudformation:DeleteChangeSet",
+                    "cloudformation:DescribeChangeSet",
+                    "cloudformation:ExecuteChangeSet",
+                    "cloudformation:GetStackPolicy",
+                    "cloudformation:SetStackPolicy",
+                    "cloudformation:ValidateTemplate",
+                    "cloudformation:GetTemplate",
+                    "iam:PassRole",
+                    "iam:CreateRole",
+                    "iam:DeleteRole",
+                    "iam:DeleteRolePolicy",
+                    "iam:CreateRolePolicy",
+                    "iam:PutRolePolicy",
+                    "iam:GetRolePolicy",
+                    "iam:CreateInstanceProfile",
+                    "iam:AddRoleToInstanceProfile",
+                    "iam:RemoveRoleFromInstanceProfile",
+                    "iam:RemoveRoleFromInstanceProfile",
+                    "iam:DeleteInstanceProfile"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Action": [
+                    "ec2:CreateKeyPair",
+                    "ec2:DeleteKeyPair",
+                    "ec2:DescribeInstanceStatus",
+                    "ec2:AttachVolume",
+                    "ec2:AuthorizeSecurityGroupIngress",
+                    "ec2:CopyImage",
+                    "ec2:CreateImage",
+                    "ec2:CreateKeypair",
+                    "ec2:CreateSecurityGroup",
+                    "ec2:CreateSnapshot",
+                    "ec2:CreateTags",
+                    "ec2:CreateVolume",
+                    "ec2:DeleteKeyPair",
+                    "ec2:DeleteSecurityGroup",
+                    "ec2:DeleteSnapshot",
+                    "ec2:DeleteVolume",
+                    "ec2:DeregisterImage",
+                    "ec2:DescribeImageAttribute",
+                    "ec2:DescribeImages",
+                    "ec2:DescribeInstances",
+                    "ec2:DescribeRegions",
+                    "ec2:DescribeSecurityGroups",
+                    "ec2:DescribeSnapshots",
+                    "ec2:DescribeSubnets",
+                    "ec2:DescribeTags",
+                    "ec2:DescribeVolumes",
+                    "ec2:DetachVolume",
+                    "ec2:GetPasswordData",
+                    "ec2:ModifyImageAttribute",
+                    "ec2:ModifyInstanceAttribute",
+                    "ec2:ModifySnapshotAttribute",
+                    "ec2:RegisterImage",
+                    "ec2:RunInstances",
+                    "ec2:StopInstances",
+                    "ec2:StartInstances",
+                    "ec2:TerminateInstances"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Sid": "AllowsPackerEc2ActionsToGitHub"
+                },
+                {
+                  "Sid": "DescribeVpcAndCreateCluster",
+                  "Effect": "Allow",
+                  "Action": [
+                    "ec2:DescribeVpcs",
+                    "ecs:DescribeClusters",
+                    "ecs:DescribeServices",
+                    "ecs:DescribeTaskDefinition",
+                    "ecs:CreateCluster",
+                    "ecs:DeleteCluster"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "GithubActionsBuildAndTestAmiIamGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+        "GroupName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "GithubActionsBuildAndTestAmiIamGroup"
+            ]
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "GithubActionsBuildAndTestAmiIamGroupInlinePolicy"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Sid": "AddPermissionToCreateAndDeleteStack",
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudformation:CreateStack",
+                    "cloudformation:DeleteStack",
+                    "cloudformation:DescribeStacks",
+                    "cloudformation:DescribeStackResource",
+                    "cloudformation:UpdateStack",
+                    "cloudformation:CreateChangeSet",
+                    "cloudformation:DeleteChangeSet",
+                    "cloudformation:DescribeChangeSet",
+                    "cloudformation:ExecuteChangeSet",
+                    "cloudformation:GetStackPolicy",
+                    "cloudformation:SetStackPolicy",
+                    "cloudformation:ValidateTemplate",
+                    "cloudformation:GetTemplate",
+                    "iam:PassRole",
+                    "iam:CreateRole",
+                    "iam:DeleteRole",
+                    "iam:DeleteRolePolicy",
+                    "iam:CreateRolePolicy",
+                    "iam:PutRolePolicy",
+                    "iam:GetRolePolicy",
+                    "iam:CreateInstanceProfile",
+                    "iam:AddRoleToInstanceProfile",
+                    "iam:RemoveRoleFromInstanceProfile",
+                    "iam:RemoveRoleFromInstanceProfile",
+                    "iam:DeleteInstanceProfile"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Action": [
+                    "ec2:CreateKeyPair",
+                    "ec2:DeleteKeyPair",
+                    "ec2:DescribeInstanceStatus",
+                    "ec2:AttachVolume",
+                    "ec2:AuthorizeSecurityGroupIngress",
+                    "ec2:CopyImage",
+                    "ec2:CreateImage",
+                    "ec2:CreateKeypair",
+                    "ec2:CreateSecurityGroup",
+                    "ec2:CreateSnapshot",
+                    "ec2:CreateTags",
+                    "ec2:CreateVolume",
+                    "ec2:DeleteKeyPair",
+                    "ec2:DeleteSecurityGroup",
+                    "ec2:DeleteSnapshot",
+                    "ec2:DeleteVolume",
+                    "ec2:DeregisterImage",
+                    "ec2:DescribeImageAttribute",
+                    "ec2:DescribeImages",
+                    "ec2:DescribeInstances",
+                    "ec2:DescribeRegions",
+                    "ec2:DescribeSecurityGroups",
+                    "ec2:DescribeSnapshots",
+                    "ec2:DescribeSubnets",
+                    "ec2:DescribeTags",
+                    "ec2:DescribeVolumes",
+                    "ec2:DetachVolume",
+                    "ec2:GetPasswordData",
+                    "ec2:ModifyImageAttribute",
+                    "ec2:ModifyInstanceAttribute",
+                    "ec2:ModifySnapshotAttribute",
+                    "ec2:RegisterImage",
+                    "ec2:RunInstances",
+                    "ec2:StopInstances",
+                    "ec2:StartInstances",
+                    "ec2:TerminateInstances"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Sid": "AllowsPackerEc2ActionsToGitHub"
+                },
+                {
+                  "Sid": "DescribeVpcAndCreateCluster",
+                  "Effect": "Allow",
+                  "Action": [
+                    "ec2:DescribeVpcs",
+                    "ecs:DescribeClusters",
+                    "ecs:DescribeServices",
+                    "ecs:DescribeTaskDefinition",
+                    "ecs:CreateCluster",
+                    "ecs:DeleteCluster"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "GithubActionsDeploySemaphoreAgentPair1IamManagedPolicy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "EC2Access",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:DescribeAccountAttributes",
+                "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeInstances",
+                "ec2:DescribeInternetGateways",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DescribeRouteTables",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeVpcs",
+                "ec2:CreateTags",
+                "ec2:DeleteTags",
+                "ec2:CreateLaunchTemplate",
+                "ec2:CreateLaunchTemplateVersion",
+                "ec2:DeleteLaunchTemplate",
+                "ec2:DeleteLaunchTemplateVersions",
+                "ec2:DescribeLaunchTemplateVersions",
+                "ec2:DescribeLaunchTemplates",
+                "ec2:GetLaunchTemplateData",
+                "ec2:ModifyLaunchTemplate",
+                "ec2:DescribeVpnGateways"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "SecurityGroupAccess",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:AuthorizeSecurityGroupEgress",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:RevokeSecurityGroupEgress",
+                "ec2:CreateSecurityGroup",
+                "ec2:DeleteSecurityGroup"
+              ],
+              "Resource": "arn:aws:ec2:*:*:security-group/*"
+            },
+            {
+              "Sid": "CreateSecurityGroupAccess",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:CreateSecurityGroup"
+              ],
+              "Resource": "arn:aws:ec2:*:*:vpc/*"
+            },
+            {
+              "Sid": "RunEC2InstancesAccess",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:AssociateIamInstanceProfile",
+                "ec2:DescribeIamInstanceProfileAssociations",
+                "ec2:DisassociateIamInstanceProfile",
+                "ec2:ModifyInstanceAttribute",
+                "ec2:ReplaceIamInstanceProfileAssociation",
+                "ec2:RunInstances",
+                "ec2:StartInstances",
+                "ec2:StopInstances",
+                "ec2:TerminateInstances"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "InstanceProfileAccess",
+              "Effect": "Allow",
+              "Action": [
+                "iam:CreateInstanceProfile",
+                "iam:GetInstanceProfile",
+                "iam:AddRoleToInstanceProfile",
+                "iam:RemoveRoleFromInstanceProfile",
+                "iam:DeleteInstanceProfile"
+              ],
+              "Resource": "arn:aws:iam::*:instance-profile/*"
+            },
+            {
+              "Sid": "KMSAccess",
+              "Effect": "Allow",
+              "Action": [
+                "kms:DescribeKey",
+                "kms:CreateGrant",
+                "kms:Decrypt",
+                "kms:Encrypt"
+              ],
+              "Resource": "arn:aws:kms:*:*:key/*"
+            },
+            {
+              "Sid": "LambdaAccess",
+              "Effect": "Allow",
+              "Action": [
+                "lambda:CreateFunction",
+                "lambda:PutFunctionConcurrency",
+                "lambda:DeleteFunctionConcurrency",
+                "lambda:PutFunctionEventInvokeConfig",
+                "lambda:DeleteFunctionEventInvokeConfig",
+                "lambda:GetFunction",
+                "lambda:GetFunctionCodeSigningConfig",
+                "lambda:AddPermission",
+                "lambda:RemovePermission",
+                "lambda:DeleteFunction",
+                "lambda:InvokeFunction",
+                "lambda:UpdateFunctionCode",
+                "lambda:UpdateFunctionConfiguration",
+                "lambda:TagResource",
+                "lambda:UntagResource",
+                "lambda:ListTags"
+              ],
+              "Resource": "arn:aws:lambda:*:*:function:*"
+            },
+            {
+              "Sid": "LogsAccess",
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:PutRetentionPolicy",
+                "logs:DeleteLogGroup",
+                "logs:TagLogGroup",
+                "logs:UntagLogGroup"
+              ],
+              "Resource": "arn:aws:logs:*:*:log-group:*"
+            },
+            {
+              "Sid": "SSMAccess",
+              "Effect": "Allow",
+              "Action": [
+                "ssm:GetParameter",
+                "ssm:GetParameters",
+                "ssm:PutParameter",
+                "ssm:DeleteParameter",
+                "ssm:AddTagsToResource",
+                "ssm:RemoveTagsFromResource"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "iam:CreateServiceLinkedRole",
+              "Resource": {
+                "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+              },
+              "Condition": {
+                "StringLike": {
+                  "iam:AWSServiceName": "autoscaling.amazonaws.com"
+                }
+              }
+            }
+          ]
+        },
+        "Groups": [
+          {
+            "Ref": "GithubActionsDeploySemaphoreAgentIamGroup"
+          }
+        ]
+      }
+    },
+    "GithubActionsDeploySemaphoreAgentPair2IamManagedPolicy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "IAMAccess",
+              "Effect": "Allow",
+              "Action": [
+                "iam:ListPolicies",
+                "iam:ListInstanceProfiles",
+                "iam:ListRoles",
+                "iam:ListPolicyVersions",
+                "iam:ListRolePolicies",
+                "iam:ListAttachedRolePolicies",
+                "iam:ListInstanceProfileTags",
+                "iam:ListRoleTags",
+                "iam:ListInstanceProfilesForRole",
+                "iam:GetPolicyVersion",
+                "iam:GetPolicy",
+                "iam:GetInstanceProfile",
+                "iam:GetRole",
+                "iam:GetRolePolicy",
+                "iam:TagPolicy",
+                "iam:UntagPolicy",
+                "iam:TagInstanceProfile",
+                "iam:UntagInstanceProfile",
+                "iam:TagRole",
+                "iam:UntagRole",
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:UpdateRoleDescription",
+                "iam:UpdateRole",
+                "iam:PassRole",
+                "iam:AddRoleToInstanceProfile",
+                "iam:RemoveRoleFromInstanceProfile",
+                "iam:CreateInstanceProfile",
+                "iam:DeleteInstanceProfile",
+                "iam:DetachRolePolicy",
+                "iam:SetDefaultPolicyVersion",
+                "iam:AttachRolePolicy",
+                "iam:UpdateAssumeRolePolicy",
+                "iam:PutRolePermissionsBoundary",
+                "iam:DeleteRolePermissionsBoundary",
+                "iam:CreatePolicy",
+                "iam:DeletePolicyVersion",
+                "iam:DeletePolicy",
+                "iam:PutRolePolicy",
+                "iam:DeleteRolePolicy"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AutoScalingAccess",
+              "Effect": "Allow",
+              "Action": [
+                "autoscaling:DescribeLifecycleHookTypes",
+                "autoscaling:DescribeTerminationPolicyTypes",
+                "autoscaling:DescribePolicies",
+                "autoscaling:DescribeWarmPool",
+                "autoscaling:DescribeScalingActivities",
+                "autoscaling:DescribeScalingProcessTypes",
+                "autoscaling:DescribeScheduledActions",
+                "autoscaling:DescribeAutoScalingGroups",
+                "autoscaling:DescribeLifecycleHooks",
+                "autoscaling:SetDesiredCapacity",
+                "autoscaling:PutLifecycleHook",
+                "autoscaling:DeleteLifecycleHook",
+                "autoscaling:SetInstanceProtection",
+                "autoscaling:CreateAutoScalingGroup",
+                "autoscaling:EnableMetricsCollection",
+                "autoscaling:DisableMetricsCollection",
+                "autoscaling:UpdateAutoScalingGroup",
+                "autoscaling:DeleteAutoScalingGroup",
+                "autoscaling:PutScalingPolicy",
+                "autoscaling:DeletePolicy",
+                "autoscaling:BatchPutScheduledUpdateGroupAction",
+                "autoscaling:PutScheduledUpdateGroupAction",
+                "autoscaling:DeleteScheduledAction",
+                "autoscaling:PutWarmPool",
+                "autoscaling:DeleteWarmPool",
+                "autoscaling:TerminateInstanceInAutoScalingGroup",
+                "autoscaling:AttachInstances",
+                "autoscaling:DescribeLaunchConfigurations",
+                "autoscaling:CreateLaunchConfiguration",
+                "autoscaling:DeleteLaunchConfiguration",
+                "autoscaling:CreateOrUpdateTags",
+                "autoscaling:DeleteTags"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "EventBridgeAccess",
+              "Effect": "Allow",
+              "Action": [
+                "events:DescribeRule",
+                "events:PutRule",
+                "events:PutTargets",
+                "events:RemoveTargets",
+                "events:DeleteRule"
+              ],
+              "Resource": "arn:aws:events:*:*:rule/*"
+            },
+            {
+              "Sid": "CDKManagedBucketsReadAccess",
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucket*",
+                "s3:GetBucket*",
+                "s3:GetObject*",
+                "s3:GetEncryptionConfiguration",
+                "s3:CreateBucket",
+                "s3:PutBucketPolicy",
+                "s3:PutBucketPublicAccessBlock",
+                "s3:DeleteBucket",
+                "s3:PutObject",
+                "s3:PutEncryptionConfiguration",
+                "s3:PutLifecycleConfiguration",
+                "s3:PutBucketVersioning",
+                "s3:DeleteObject"
+              ],
+              "Resource": [
+                "arn:aws:s3:::cdk*",
+                "arn:aws:s3:::cdk*/*"
+              ]
+            },
+            {
+              "Sid": "ResourceGroupAccess",
+              "Effect": "Allow",
+              "Action": [
+                "resource-groups:CreateGroup",
+                "resource-groups:DeleteGroup",
+                "resource-groups:GetGroup",
+                "resource-groups:GetGroupConfiguration",
+                "resource-groups:GetGroupQuery",
+                "resource-groups:GetTags",
+                "resource-groups:GroupResources",
+                "resource-groups:ListGroupResources",
+                "resource-groups:ListGroups",
+                "resource-groups:PutGroupConfiguration",
+                "resource-groups:PutGroupPolicy",
+                "resource-groups:SearchResources",
+                "resource-groups:Tag",
+                "resource-groups:UngroupResources",
+                "resource-groups:Untag",
+                "resource-groups:UpdateGroup",
+                "resource-groups:UpdateGroupQuery"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "DedicatedHostAccess",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:AllocateHosts",
+                "ec2:DescribeHosts",
+                "ec2:ModifyHosts",
+                "ec2:ReleaseHosts"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ecr:CreateRepository",
+                "ecr:DescribeRepositories",
+                "ecr:ListImages",
+                "ecr:BatchDeleteImage",
+                "ecr:PutImageTagMutability",
+                "ecr:GetRepositoryPolicy",
+                "ecr:SetRepositoryPolicy",
+                "ecr:DeleteRepository",
+                "ecr:PutLifecyclePolicy"
+              ],
+              "Resource": {
+                "Fn::Sub": "arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/*"
+              }
+            }
+          ]
+        },
+        "Groups": [
+          {
+            "Ref": "GithubActionsDeploySemaphoreAgentIamGroup"
+          }
+        ]
+      }
+    },
+    "GithubActionsDeploySemaphoreAgentIamGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+        "GroupName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "GithubActionsDeploySemaphoreAgentIamGroup"
+            ]
+          ]
+        }
+      }
+    },
+    "GithubActionsIamUserGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+        "GroupName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "GithubActionsIamUserGroup"
+            ]
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "GithubActionsIamUserGroupInlinePolicy"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Action": [
+                    "cloudformation:CreateStack",
+                    "cloudformation:DeleteStack",
+                    "cloudformation:UpdateStack",
+                    "cloudformation:ListStacks",
+                    "cloudformation:CreateChangeSet",
+                    "cloudformation:ExecuteChangeSet",
+                    "cloudformation:GetStackPolicy",
+                    "cloudformation:SetStackPolicy",
+                    "cloudformation:ValidateTemplate",
+                    "cloudformation:GetTemplate",
+                    "cloudformation:Describe*",
+                    "iam:PassRole"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Sid": "AllowCloudformationActions"
+                },
+                {
+                  "Action": [
+                    "iam:PassRole"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/cfstack-Init-CloudFormationServiceIamRole*"
+                    }
+                  ],
+                  "Effect": "Allow",
+                  "Sid": "AllowIAMPassRoleAction"
+                },
+                {
+                  "Action": [
+                    "s3:*"
+                  ],
+                  "Resource": [
+                    "arn:aws:s3:::cfstack-init-templatess3bucket-*",
+                    "arn:aws:s3:::cfstack-init-sources3bucket-*"
+                  ],
+                  "Effect": "Allow",
+                  "Sid": "PolicyForAccessToCfstackBucket"
+                },
+                {
+                  "Action": [
+                    "ec2:DescribeInstanceStatus",
+                    "ec2:AttachVolume",
+                    "ec2:AuthorizeSecurityGroupIngress",
+                    "ec2:CopyImage",
+                    "ec2:CreateImage",
+                    "ec2:CreateKeypair",
+                    "ec2:CreateSecurityGroup",
+                    "ec2:CreateSnapshot",
+                    "ec2:CreateTags",
+                    "ec2:CreateVolume",
+                    "ec2:DeleteKeyPair",
+                    "ec2:DeleteSecurityGroup",
+                    "ec2:DeleteSnapshot",
+                    "ec2:DeleteVolume",
+                    "ec2:DeregisterImage",
+                    "ec2:DescribeImageAttribute",
+                    "ec2:DescribeImages",
+                    "ec2:DescribeInstances",
+                    "ec2:DescribeRegions",
+                    "ec2:DescribeSecurityGroups",
+                    "ec2:DescribeSnapshots",
+                    "ec2:DescribeSubnets",
+                    "ec2:DescribeTags",
+                    "ec2:DescribeVolumes",
+                    "ec2:DescribeAvailabilityZones",
+                    "ec2:DetachVolume",
+                    "ec2:GetPasswordData",
+                    "ec2:ModifyImageAttribute",
+                    "ec2:ModifyInstanceAttribute",
+                    "ec2:ModifySnapshotAttribute",
+                    "ec2:RegisterImage",
+                    "ec2:RunInstances",
+                    "ec2:DescribeInstanceTypes",
+                    "kms:Encrypt",
+                    "kms:Decrypt",
+                    "kms:ReEncrypt*",
+                    "kms:GenerateDataKey*",
+                    "kms:DescribeKey",
+                    "kms:CreateGrant"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Sid": "AllowsPackerEc2ActionsToGitHub"
+                },
+                {
+                  "Action": [
+                    "kms:GenerateDataKey",
+                    "kms:Decrypt"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Sid": "AllowGithubToGetKMSGeneratedDataKeyWhenAccessingS3Bucket"
+                },
+                {
+                  "Action": [
+                    "s3:ListBucket",
+                    "s3:ListBucketVersions",
+                    "s3:DeleteObject",
+                    "s3:DeleteObjectVersion"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Sid": "AllowDeletionOfAllObjectsInAllS3Buckets"
+                },
+                {
+                  "Action": [
+                    "ssm:SendCommand",
+                    "ssm:GetCommandInvocation"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Sid": "AllowAccessToRunSSMCommand"
+                },
+                {
+                  "Action": [
+                    "secretsmanager:PutSecretValue"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Sid": "AllowAccessToPutSecretValue"
+                },
+                {
+                  "Action": [
+                    "elasticache:DescribeReplicationGroups"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Sid": "AllowAccessToDescribeReplicationGroups"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "GithubActionsIamUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "UserName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "GithubActionsIamUser"
+            ]
+          ]
+        },
+        "Groups": [
+          {
+            "Ref": "GithubActionsIamUserGroup"
+          },
+          {
+            "Ref": "GithubActionsBuildAndTestAmiIamGroup"
+          },
+          {
+            "Ref": "GithubActionsDeploySemaphoreAgentIamGroup"
+          }
+        ]
+      }
+    }
+  }
+}

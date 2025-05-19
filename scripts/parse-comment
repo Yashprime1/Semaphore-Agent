@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+
+import json
+from pytablewriter import MarkdownTableWriter
+
+with open("diff.json") as f:
+    data = json.load(f)
+
+regions = data["Regions"]
+
+comment = ""
+for region in regions:
+    for stack in region["Stacks"]:
+        comment = comment + "Stack: " + stack["StackName"] + " in region " + region["Name"] + "\n\n"
+        x = MarkdownTableWriter()
+        if stack["Changes"]["Status"] == "failed":
+            comment = comment + "ChangeSet Failed " + "\n"
+            comment = comment+ stack["Changes"]["StatusReason"]+"\n"
+        elif stack["Changes"]["Status"] == "unknown":
+            comment = comment + "ChangeSet Pending " + "\n"
+            comment = comment+ stack["Changes"]["StatusReason"]+"\n"
+        else:
+            if len(stack["Changes"]["Resources"]) == 0:
+                comment = comment + "ChangeSet Empty " + "\n"
+                if stack["Changes"]["ForceStackUpdate"]:
+                    comment = comment + "Stack update without any resource update " + "\n"
+                if stack["Changes"]["StackPolicyChange"]:
+                    comment = comment + "Stack policy to be updated " + "\n"
+            else:
+                Action_Symbol_Map={
+                    "Add":"+  ",
+                    "Remove":"-  ",
+                    "Modify":"~  "
+                }
+                for res in stack["Changes"]["Resources"]:
+                    Action_Symbol=Action_Symbol_Map[res["Action"]]
+                    if res["Action"] == "Modify" and res["Replacement"]=="True":
+                        Action_Symbol="-/+"
+                    elif res["Action"] == "Modify" and res["Replacement"]=="Conditional":
+                        Action_Symbol="~~ "
+                    comment=comment+Action_Symbol+"  "+res["Name"]+"  ("+res["Type"].lower()+")\n"
+        comment = comment + "\n\n"
+
+if comment == "":
+    comment = "No changes found\n"
+
+comment="```diff\n"+" ~ => update without replacement, + => add resource , - => remove resource, ~~ => conditional update , -/+ => update with replacement\n\n"+comment+"```\n"
+print(comment)
+
+f = open('comment.txt', 'w')
+f.write(comment)
+f.close()

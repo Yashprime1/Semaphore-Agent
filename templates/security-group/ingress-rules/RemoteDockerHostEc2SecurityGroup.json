@@ -1,0 +1,22 @@
+{
+  "Resources": {
+    "SemaphoreAgentToRemoteDockerHostOnPort2375Ec2SecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "FromPort": "2375",
+        "ToPort": "2375",
+        "SourceSecurityGroupId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "System-SecurityGroup-SemaphoreAgentEc2SecurityGroupId"
+          }
+        },
+        "GroupId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "System-SecurityGroup-RemoteDockerHostEc2SecurityGroupId"
+          }
+        }
+      }
+    }
+  }
+}

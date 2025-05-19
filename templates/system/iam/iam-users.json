@@ -1,0 +1,116 @@
+{
+  "Resources": {
+    "SneDeveloperIamGroup": {
+      "Type": "AWS::IAM::Group",
+      "Properties": {
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AWSSupportAccess",
+          "arn:aws:iam::aws:policy/job-function/Billing",
+          "arn:aws:iam::aws:policy/ReadOnlyAccess",
+          "arn:aws:iam::aws:policy/ServiceQuotasFullAccess"
+        ],
+        "Policies": [
+          {
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "AutoScalingGroupUpdateAccess",
+                  "Effect": "Allow",
+                  "Action": [
+                    "autoscaling:UpdateAutoScalingGroup",
+                    "autoscaling:SetDesiredCapacity"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Sid": "TemporaryEcsServiceUpdateAccess",
+                  "Effect": "Allow",
+                  "Action": [
+                    "ecs:UpdateService",
+                    "ecs:DescribeServices"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Sid": "CloudformationUpdateStackAccess",
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudformation:ContinueUpdateRollback",
+                    "cloudformation:CancelUpdateStack"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Sid": "InstanceStartStopAccess",
+                  "Effect": "Allow",
+                  "Action": [
+                    "ec2:StartInstances",
+                    "ec2:StopInstances"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Sid": "SSMAccess",
+                  "Effect": "Allow",
+                  "Action": [
+                    "ssm:StartSession",
+                    "ssm:TerminateSession",
+                    "ssm:DescribeSessions",
+                    "ssm:GetConnectionStatus",
+                    "ssm:DescribeInstanceProperties"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            },
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  {
+                    "Ref": "AWS::StackName"
+                  },
+                  "SneDeveloperIamGroup"
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "MayankBhadoriyaIamUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "UserName": "mayank.bhadoriya@clevertap.com",
+        "Groups": [
+          {
+            "Ref": "SneDeveloperIamGroup"
+          }
+        ]
+      }
+    },
+    "SiddhantSukhijaIamUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "UserName": "siddhant@clevertap.com",
+        "Groups": [
+          {
+            "Ref": "SneDeveloperIamGroup"
+          }
+        ]
+      }
+    },
+    "JudeIamUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "UserName": "jude@clevertap.com",
+        "Groups": [
+          {
+            "Ref": "SneDeveloperIamGroup"
+          }
+        ]
+      }
+    }
+  }
+}

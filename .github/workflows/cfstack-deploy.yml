@@ -1,0 +1,44 @@
+name: cfstack-deploy
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+    concurrency: release
+    runs-on: 'ubuntu-latest'
+    if: github.run_attempt == 1
+    steps:
+      - name: Generate github token
+        id: generate-github-token
+        uses: tibdex/github-app-token@v2.1.0
+        with:
+          app_id: ${{ secrets.CLEVERTAP_SNE_BOT_ID }}
+          private_key: ${{ secrets.CLEVERTAP_SNE_BOT_PRIVATE_ACCESS_KEY }}
+
+      - name: Download asset
+        uses: robinraju/release-downloader@v1.11
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ github.event.release.name }}
+          fileName: cloudformation-build.zip
+          token: ${{ steps.generate-github-token.outputs.token }}
+
+      - name: Unzip Asset
+        run: |
+          set -euxo pipefail
+          unzip -q cloudformation-build.zip && rm -rf cloudformation-build.zip
+
+      - name: Make cfstack executable
+        run: |
+          set -euxo pipefail
+          chmod +x ./cfstack
+
+      - name: Deploy cfstack diff
+        run: |
+          set -euxo pipefail
+          ./cfstack deploy --manifest diff.json --values values.json --role ${{ secrets.BUILD_AWS_CLOUDFORMATION_SERVICE_IAM_ROLE }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}

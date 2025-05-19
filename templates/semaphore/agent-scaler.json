@@ -1,0 +1,759 @@
+{
+  "Parameters": {
+    "NetworkStack": {
+      "Description": "Name of the stack that this stack references for networking",
+      "Type": "String"
+    },
+    "SemaphoreEndpoint": {
+      "Type": "String",
+      "Default": "clevertap.semaphoreci.com",
+      "Description": "Semaphore organization endpoint"
+    },
+    "BuildAccountProductionAccessIAMRoleArn": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Arn for BuildAccountProductionAccessIAMRole in Production account"
+    },
+    "BuildAccountDataScienceAccessIAMRoleArn": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Arn for BuildAccountDataScienceAccessIAMRole in Production account"
+    },
+    "SemaphoreAgentScalerLambdaCodeS3Key": {
+      "Type": "String",
+      "Description": "Semaphore agent scaler lambda code s3 key"
+    },
+    "SemaphoreAgentRootVolumeSize": {
+      "Type": "Number",
+      "Default": "30",
+      "Description": "Semaphore agent root volume size"
+    },
+    "SemaphoreAgentAmiId": {
+      "Type": "String",
+      "Description": "Semaphore Agent Ami Id"
+    },
+    "SemaphoreAgentInstanceType": {
+      "Type": "String",
+      "Description": "Semaphore Agent Instance Type"
+    },
+    "SemaphoreAgentAsgMaxSize": {
+      "Type": "String",
+      "Description": "Semaphore Agent Asg Max Size"
+    },
+    "SemaphoreAgentAsgMinSize": {
+      "Default": "0",
+      "Type": "String",
+      "Description": "Semaphore Agent Asg Min Size"
+    },
+    "EnableStandaloneSemaphoreAgent": {
+      "Type": "String",
+      "Default": "false",
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "Description": "Enable standalone Semaphore agent"
+    }
+  },
+  "Conditions": {
+    "IsStandaloneSemaphoreAgentEnabled": {
+      "Fn::Equals": [
+        {
+          "Ref": "EnableStandaloneSemaphoreAgent"
+        },
+        "true"
+      ]
+    }
+  },
+  "Resources": {
+    "SemaphoreAgentConfigSsmParameter": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Description": "Semaphore agent config",
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-Config"
+        },
+        "Tier": "Standard",
+        "Type": "String",
+        "Value": {
+          "Fn::Join": [
+            "",
+            [
+              "{",
+              "\"endpoint\":\"",
+              {
+                "Ref": "SemaphoreEndpoint"
+              },
+              "\",",
+              "\"agentTokenParameterName\":\"",
+              {
+                "Ref": "SemaphoreAgentRegistrationTokenSsmParameter"
+              },
+              "\",",
+              "\"sshKeysParameterName\":\"",
+              {
+                "Fn::ImportValue": "Semaphore-GitHubSshKeyFingerprint-GithubPublicSshKeyFingerprintSSMParameterName"
+              },
+              "\",",
+              "\"disconnectAfterJob\":\"true\",",
+              "\"disconnectAfterIdleTimeout\":\"300\",",
+              "\"envVars\":[",
+              "\"SEMAPHORE_GIT_CACHE_AGE=86400\",",
+              "\"SEMAPHORE_CACHE_BACKEND=s3\",",
+              "\"SEMAPHORE_CACHE_S3_BUCKET=",
+              {
+                "Fn::ImportValue": "System-SharedResources-SemaphoreCachingS3BucketName"
+              },
+              "\",",
+              "\"SEMAPHORE_CACHE_USE_EC2_INSTANCE_PROFILE=true\"",
+              "],",
+              "\"usePreSignedURL\":false",
+              "}"
+            ]
+          ]
+        }
+      }
+    },
+    "SemaphoreAgentEc2InstanceIamRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentEc2InstanceIamPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "autoscaling:SetInstanceHealth",
+                "autoscaling:TerminateInstanceInAutoScalingGroup"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Sub": "arn:aws:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/${AWS::StackName}-SemaphoreAgentAutoScalingAutoScalingGroup-*"
+              }
+            },
+            {
+              "Action": "ssm:GetParameter",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::Sub": "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/"
+                      },
+                      {
+                        "Fn::ImportValue": "Semaphore-GitHubSshKeyFingerprint-GithubPublicSshKeyFingerprintSSMParameterName"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Sub": "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SemaphoreAgentConfigSsmParameter}"
+                },
+                {
+                  "Fn::Sub": "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SemaphoreAgentRegistrationTokenSsmParameter}"
+                }
+              ]
+            },
+            {
+              "Action": [
+                "ec2:DescribeInstances",
+                "kms:GenerateDataKey",
+                "ssm:*"
+              ],
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": [
+                "s3:ListBucket",
+                "s3:ListBucketVersions",
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion"
+              ],
+              "Resource": [
+                "arn:aws:s3:::x*batch-dashboard*",
+                "arn:aws:s3:::x*batch-eventstore*",
+                "arn:aws:s3:::x*billing*",
+                "arn:aws:s3:::x*dashboard*",
+                "arn:aws:s3:::x*eventstore*",
+                "arn:aws:s3:::x*flowlogs*",
+                "arn:aws:s3:::x*integration-test-framework*",
+                "arn:aws:s3:::x*sharedresources*",
+                "arn:aws:s3:::x*dataexports*"
+              ],
+              "Effect": "Allow",
+              "Sid": "AllowDeletionOfAllObjectsInAllS3Buckets"
+            },
+            {
+              "Action": "kms:Decrypt",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Sub": "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/alias/aws/ssm"
+              }
+            },
+            {
+              "Action": [
+                "cloudformation:CreateStack",
+                "cloudformation:DeleteStack",
+                "cloudformation:DescribeStacks",
+                "cloudformation:DescribeStackResource",
+                "cloudformation:UpdateStack",
+                "cloudformation:ListStacks",
+                "cloudformation:CreateChangeSet",
+                "cloudformation:DeleteChangeSet",
+                "cloudformation:DescribeChangeSet",
+                "cloudformation:ExecuteChangeSet",
+                "cloudformation:GetStackPolicy",
+                "cloudformation:SetStackPolicy",
+                "cloudformation:ValidateTemplate",
+                "cloudformation:GetTemplate",
+                "cloudformation:Describe*",
+                "iam:PassRole"
+              ],
+              "Resource": "*",
+              "Effect": "Allow",
+              "Sid": "AllowCloudformationActionsAndIamPassrole"
+            },
+            {
+              "Action": [
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:GetBucketVersioning",
+                "s3:PutObject"
+              ],
+              "Resource": [
+                "arn:aws:s3:::cfstack-init-templatess3bucket-*",
+                "arn:aws:s3:::cfstack-init-templatess3bucket-*/*",
+                "arn:aws:s3:::cfstack-init-sources3bucket-*",
+                "arn:aws:s3:::cfstack-init-sources3bucket-*/*"
+              ],
+              "Effect": "Allow",
+              "Sid": "PolicyForAccessToCfstackBucket"
+            },
+            {
+              "Effect": "Allow",
+              "Action": "sts:AssumeRole",
+              "Resource": {
+                "Ref": "BuildAccountProductionAccessIAMRoleArn"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "sts:AssumeRole",
+              "Resource": {
+                "Ref": "BuildAccountDataScienceAccessIAMRoleArn"
+              }
+            },
+            {
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:DescribeLogStreams",
+                "logs:DescribeLogGroups",
+                "logs:PutLogEvents",
+                "logs:PutRetentionPolicy"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/semaphore/*"
+              }
+            },
+            {
+              "Action": [
+                "secretsmanager:PutSecretValue"
+              ],
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": [
+                "s3:GetObject",
+                "s3:GetObjectAcl",
+                "s3:GetBucketLocation",
+                "s3:ListObjects",
+                "s3:ListObjectsV2",
+                "s3:ListBucket"
+              ],
+              "Resource": [
+                "arn:aws:s3:::*-integration-test-framework-itfs3*",
+                "arn:aws:s3:::*-integration-test-framework-itfs3*/*"
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:DeleteObject"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::ImportValue": "System-SharedResources-SemaphoreCachingS3BucketArn"
+                },
+                {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      {
+                        "Fn::ImportValue": "System-SharedResources-SemaphoreCachingS3BucketArn"
+                      },
+                      "*"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": {
+          "Fn::Sub": "${AWS::StackName}-SemaphoreAgentEc2InstanceIamPolicy"
+        },
+        "Roles": [
+          {
+            "Ref": "SemaphoreAgentEc2InstanceIamRole"
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentEc2InstanceIamInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "SemaphoreAgentEc2InstanceIamRole"
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentEc2LaunchTemplate": {
+      "Type": "AWS::EC2::LaunchTemplate",
+      "Properties": {
+        "LaunchTemplateData": {
+          "BlockDeviceMappings": [
+            {
+              "DeviceName": "/dev/sda1",
+              "Ebs": {
+                "VolumeSize": {
+                  "Ref": "SemaphoreAgentRootVolumeSize"
+                },
+                "VolumeType": "gp2"
+              }
+            }
+          ],
+          "IamInstanceProfile": {
+            "Arn": {
+              "Fn::GetAtt": [
+                "SemaphoreAgentEc2InstanceIamInstanceProfile",
+                "Arn"
+              ]
+            }
+          },
+          "ImageId": {
+            "Ref": "SemaphoreAgentAmiId"
+          },
+          "InstanceInitiatedShutdownBehavior": "terminate",
+          "InstanceType": {
+            "Ref": "SemaphoreAgentInstanceType"
+          },
+          "SecurityGroupIds": [
+            {
+              "Fn::ImportValue": "System-SecurityGroup-SemaphoreAgentEc2SecurityGroupId"
+            }
+          ],
+          "TagSpecifications": [
+            {
+              "ResourceType": "instance",
+              "Tags": [
+                {
+                  "Key": "ct-aws:cloudformation:stack-name",
+                  "Value": {
+                    "Ref": "AWS::StackName"
+                  }
+                }
+              ]
+            },
+            {
+              "ResourceType": "volume",
+              "Tags": [
+                {
+                  "Key": "ct-aws:cloudformation:stack-name",
+                  "Value": {
+                    "Ref": "AWS::StackName"
+                  }
+                }
+              ]
+            }
+          ],
+          "UserData": {
+            "Fn::Base64": {
+              "Fn::Sub": "#!/bin/bash\n/opt/semaphore/agent/start.sh ${SemaphoreAgentConfigSsmParameter}"
+            }
+          }
+        },
+        "TagSpecifications": [
+          {
+            "ResourceType": "launch-template",
+            "Tags": [
+              {
+                "Key": "ct-aws:cloudformation:stack-name",
+                "Value": {
+                  "Ref": "AWS::StackName"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentAutoScalingAutoScalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "Cooldown": "60",
+        "MixedInstancesPolicy": {
+          "InstancesDistribution": {
+            "OnDemandBaseCapacity": "0",
+            "OnDemandPercentageAboveBaseCapacity": "0",
+            "SpotAllocationStrategy": "price-capacity-optimized"
+          },
+          "LaunchTemplate": {
+            "LaunchTemplateSpecification": {
+              "LaunchTemplateId": {
+                "Ref": "SemaphoreAgentEc2LaunchTemplate"
+              },
+              "Version": {
+                "Fn::GetAtt": [
+                  "SemaphoreAgentEc2LaunchTemplate",
+                  "LatestVersionNumber"
+                ]
+              }
+            }
+          }
+        },
+        "MaxSize": {
+          "Ref": "SemaphoreAgentAsgMaxSize"
+        },
+        "MinSize": {
+          "Ref": "SemaphoreAgentAsgMinSize"
+        },
+        "Tags": [
+          {
+            "Key": "application",
+            "PropagateAtLaunch": true,
+            "Value": "semaphore-agent"
+          }
+        ],
+        "VPCZoneIdentifier": [
+          {
+            "Fn::ImportValue": {
+              "Fn::Sub": "${NetworkStack}-SemaphoreAgentEc2SubnetId"
+            }
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentAutoScalingAzReBalanceSuspender": {
+      "Type": "AWS::CloudFormation::CustomResource",
+      "Properties": {
+        "ServiceTimeout": 600,
+        "ServiceToken": {
+          "Fn::ImportValue": "Semaphore-AzReBalanceSuspender-AzReBalanceSuspenderProviderFrameworkOnEventLambdaFunctionArn"
+        },
+        "AutoScalingGroupName": {
+          "Ref": "SemaphoreAgentAutoScalingAutoScalingGroup"
+        }
+      },
+      "UpdateReplacePolicy": "Delete",
+      "DeletionPolicy": "Delete"
+    },
+    "SemaphoreAgentScalerLambdaIamRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+              ]
+            ]
+          },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentScalerLambdaIamPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "autoscaling:DescribeAutoScalingGroups",
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": "autoscaling:SetDesiredCapacity",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Sub": "arn:aws:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/${AWS::StackName}-SemaphoreAgentAutoScalingAutoScalingGroup-*"
+              }
+            },
+            {
+              "Action": "ssm:GetParameter",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Sub": "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SemaphoreAgentRegistrationTokenSsmParameter}"
+              }
+            },
+            {
+              "Action": "kms:Decrypt",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Sub": "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/alias/aws/ssm"
+              }
+            },
+            {
+              "Action": "cloudwatch:PutMetricData",
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": {
+          "Fn::Sub": "${AWS::StackName}-SemaphoreAgentScalerLambdaIamPolicy"
+        },
+        "Roles": [
+          {
+            "Ref": "SemaphoreAgentScalerLambdaIamRole"
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentScalerLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::ImportValue": "cfstack-Init-SourceS3BucketName"
+          },
+          "S3Key": {
+            "Ref": "SemaphoreAgentScalerLambdaCodeS3Key"
+          }
+        },
+        "Description": "Dynamically scale Semaphore agents based on jobs demand",
+        "Environment": {
+          "Variables": {
+            "SEMAPHORE_AGENT_TOKEN_PARAMETER_NAME": {
+              "Ref": "SemaphoreAgentRegistrationTokenSsmParameter"
+            },
+            "SEMAPHORE_AGENT_STACK_NAME": {
+              "Ref": "AWS::StackName"
+            },
+            "SEMAPHORE_ENDPOINT": {
+              "Ref": "SemaphoreEndpoint"
+            },
+            "SEMAPHORE_AGENT_OVERPROVISION_STRATEGY": "none",
+            "SEMAPHORE_AGENT_OVERPROVISION_FACTOR": "0"
+          }
+        },
+        "Handler": "app.handler",
+        "ReservedConcurrentExecutions": 1,
+        "Role": {
+          "Fn::GetAtt": [
+            "SemaphoreAgentScalerLambdaIamRole",
+            "Arn"
+          ]
+        },
+        "Runtime": "nodejs18.x",
+        "Timeout": 60,
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::ImportValue": "System-SecurityGroup-SemaphoreAgentScalerLambdaEc2SecurityGroupId"
+            }
+          ],
+          "SubnetIds": [
+            {
+              "Fn::ImportValue": {
+                "Fn::Sub": "${NetworkStack}-SemaphoreAgentEc2SubnetId"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "SemaphoreAgentScalerLambdaFunctionLogRetention": {
+      "Type": "Custom::LogRetention",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::ImportValue": "CloudWatchLogRetention-CustomResource-LogRetentionLambdaFunctionArn"
+        },
+        "LogGroupName": {
+          "Fn::Join": [
+            "",
+            [
+              "/aws/lambda/",
+              {
+                "Ref": "SemaphoreAgentScalerLambdaFunction"
+              }
+            ]
+          ]
+        },
+        "RetentionInDays": 30
+      }
+    },
+    "SemaphoreAgentScalerLambdaEventInvokeConfig": {
+      "Type": "AWS::Lambda::EventInvokeConfig",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "SemaphoreAgentScalerLambdaFunction"
+        },
+        "MaximumEventAgeInSeconds": 60,
+        "MaximumRetryAttempts": 0,
+        "Qualifier": "$LATEST"
+      }
+    },
+    "SemaphoreAgentScalerEventsRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Description": "Rule to dynamically invoke lambda function to scale Semaphore agent asg",
+        "ScheduleExpression": "rate(1 minute)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "SemaphoreAgentScalerLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "Target0"
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentScalerEventsRuleLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "SemaphoreAgentScalerLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "SemaphoreAgentScalerEventsRule",
+            "Arn"
+          ]
+        }
+      }
+    },
+    "SemaphoreAgentRegistrationTokenSsmParameter": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Description": "Semaphore agent registration token",
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-Agent-Registration-Token"
+        },
+        "Tier": "Standard",
+        "Type": "String",
+        "Value": "replace_me"
+      }
+    },
+    "SemaphoreAgentEc2Instance": {
+      "Condition": "IsStandaloneSemaphoreAgentEnabled",
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "LaunchTemplate": {
+          "LaunchTemplateId": {
+            "Ref": "SemaphoreAgentEc2LaunchTemplate"
+          },
+          "Version": {
+            "Fn::GetAtt": [
+              "SemaphoreAgentEc2LaunchTemplate",
+              "LatestVersionNumber"
+            ]
+          }
+        },
+        "SubnetId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-SemaphoreAgentEc2SubnetId"
+          }
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-StandaloneSemaphoreAgent"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

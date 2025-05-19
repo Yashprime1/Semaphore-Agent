@@ -1,0 +1,284 @@
+{
+  "ParallelDeployment": true,
+  "Regions": [
+    {
+      "Name": "ap-south-1",
+      "Stacks": [
+        {
+          "StackName": "System-IAM",
+          "Action": "CREATE",
+          "TemplatePath": "templates/system/iam/iam.json",
+          "Parameters": {},
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "System-IAM-Users",
+          "Action": "CREATE",
+          "TemplatePath": "templates/system/iam/iam-users.json",
+          "Parameters": {},
+          "StackPolicy": {}
+        }
+      ]
+    },
+    {
+      "Name": "eu-west-1",
+      "Stacks": [
+        {
+          "StackName": "CloudWatchLogRetention-CustomResource",
+          "Action": "CREATE",
+          "TemplatePath": "templates/custom-resources/cloudwatch-log-retention.json",
+          "Parameters": {},
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "System-Network",
+          "Action": "CREATE",
+          "TemplatePath": "templates/network/network.json",
+          "Parameters": {
+            "VPCNetworkPrefix": "10.4",
+            "NatInstanceAmiId": "ami-0cb29d27de4267690",
+            "NatInstanceType": "c7gn.xlarge"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "System-SecurityGroup",
+          "Action": "CREATE",
+          "TemplatePath": "templates/security-group/security-group.json",
+          "DependsOn": [
+            "System-Network"
+          ],
+          "Parameters": {
+            "NetworkStack": "System-Network"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "System-SecurityGroup-IngressRule-RemoteDockerHostEc2SecurityGroup",
+          "Action": "CREATE",
+          "TemplatePath": "templates/security-group/ingress-rules/RemoteDockerHostEc2SecurityGroup.json",
+          "DependsOn": [
+            "System-Network",
+            "System-SecurityGroup"
+          ],
+          "Parameters": {},
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "System-SharedResources",
+          "Action": "CREATE",
+          "TemplatePath": "templates/system/sharedresources/sharedresources.json",
+          "Parameters": {},
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "System-RemoteDockerHost",
+          "Action": "CREATE",
+          "TemplatePath": "templates/system/remote-docker-host/remote-docker-host.json",
+          "DependsOn": [
+            "System-Network",
+            "System-SecurityGroup"
+          ],
+          "Parameters": {
+            "NetworkStack": "System-Network",
+            "EnableArm64Ec2Instance": "true",
+            "Arm64Ec2ImageId": "ami-096cb7832572aeb6e",
+            "Arm64Ec2InstanceType": "c6g.xlarge"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-GitHubSshKeyFingerprint",
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/github-ssh-key-fingerprint.json",
+          "DependsOn": [
+            "cfstack-Init",
+            "CloudWatchLogRetention-CustomResource"
+          ],
+          "Parameters": {
+            "GitHubSshKeyFingerprintSyncLambdaCodeS3Key": "lambda/github-ssh-key-fingerprint-synchronizer/e5688de6-fb72-4f1d-a1fb-ddc5d57c41ca.zip",
+            "GithubPublicSshKeyFingerprint": "[\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl\",\"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=\",\"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=\"]"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-AzReBalanceSuspender",
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/az-re-balance-suspender.json",
+          "DependsOn": [
+            "cfstack-Init",
+            "CloudWatchLogRetention-CustomResource"
+          ],
+          "Parameters": {
+            "AzReBalanceSuspenderLambdaCodeS3Key": "lambda/az-rebalance-suspender/dcb1bf17-7f9a-404d-8f86-a8ed4f8a2b43.zip",
+            "AzReBalanceSuspenderProviderFrameworkOnEventLambdaCodeS3Key": "lambda/custom-resources-provider-framework/d1c1d2d8-6cc2-46e9-918e-66f77cff91c0.zip"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-Agent-s1-t2-micro",
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/agent-scaler.json",
+          "DependsOn": [
+            "cfstack-Init",
+            "System-Network",
+            "System-SecurityGroup",
+            "System-SharedResources",
+            "CloudWatchLogRetention-CustomResource",
+            "Semaphore-GitHubSshKeyFingerprint",
+            "Semaphore-AzReBalanceSuspender"
+          ],
+          "Parameters": {
+            "NetworkStack": "System-Network",
+            "SemaphoreEndpoint": "clevertap.semaphoreci.com",
+            "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/c7a5ab7e-9ba5-4680-9782-22e77e8520ba.zip",
+            "SemaphoreAgentRootVolumeSize": "30",
+            "SemaphoreAgentAmiId": "ami-07acf6221525e071d",
+            "SemaphoreAgentInstanceType": "t2.micro",
+            "SemaphoreAgentAsgMaxSize": "20",
+            "SemaphoreAgentAsgMinSize": "0",
+            "BuildAccountProductionAccessIAMRoleArn": "arn:aws:iam::062484260092:role/System-Iam-BuildAccountProductionAccessIAMRole",
+            "BuildAccountDataScienceAccessIAMRoleArn": "arn:aws:iam::796973483800:role/System-Datascience-Iam-BuildAccountProductionAccessIAMRole"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-Agent-s1-c5-large",
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/agent-scaler.json",
+          "DependsOn": [
+            "cfstack-Init",
+            "System-Network",
+            "System-SecurityGroup",
+            "System-SharedResources",
+            "CloudWatchLogRetention-CustomResource",
+            "Semaphore-GitHubSshKeyFingerprint",
+            "Semaphore-AzReBalanceSuspender"
+          ],
+          "Parameters": {
+            "NetworkStack": "System-Network",
+            "SemaphoreEndpoint": "clevertap.semaphoreci.com",
+            "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/c7a5ab7e-9ba5-4680-9782-22e77e8520ba.zip",
+            "SemaphoreAgentRootVolumeSize": "30",
+            "SemaphoreAgentAmiId": "ami-07acf6221525e071d",
+            "SemaphoreAgentInstanceType": "c5.large",
+            "SemaphoreAgentAsgMaxSize": "20",
+            "SemaphoreAgentAsgMinSize": "0",
+            "BuildAccountProductionAccessIAMRoleArn": "arn:aws:iam::062484260092:role/System-Iam-BuildAccountProductionAccessIAMRole",
+            "BuildAccountDataScienceAccessIAMRoleArn": "arn:aws:iam::796973483800:role/System-Datascience-Iam-BuildAccountProductionAccessIAMRole"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-Agent-s1-ultron-c5-12xlarge",
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/agent-scaler.json",
+          "DependsOn": [
+            "cfstack-Init",
+            "System-Network",
+            "System-SecurityGroup",
+            "System-SharedResources",
+            "CloudWatchLogRetention-CustomResource",
+            "Semaphore-GitHubSshKeyFingerprint",
+            "Semaphore-AzReBalanceSuspender"
+          ],
+          "Parameters": {
+            "NetworkStack": "System-Network",
+            "SemaphoreEndpoint": "clevertap.semaphoreci.com",
+            "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/c7a5ab7e-9ba5-4680-9782-22e77e8520ba.zip",
+            "SemaphoreAgentRootVolumeSize": "100",
+            "SemaphoreAgentAmiId": "ami-0917b009eef00aeec",
+            "SemaphoreAgentInstanceType": "c5.12xlarge",
+            "SemaphoreAgentAsgMaxSize": "75",
+            "SemaphoreAgentAsgMinSize": "0",
+            "EnableStandaloneSemaphoreAgent": "false",
+            "BuildAccountProductionAccessIAMRoleArn": "arn:aws:iam::062484260092:role/System-Iam-BuildAccountProductionAccessIAMRole",
+            "BuildAccountDataScienceAccessIAMRoleArn": "arn:aws:iam::796973483800:role/System-Datascience-Iam-BuildAccountProductionAccessIAMRole"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-Agent-s1-ultron-t2-micro",
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/agent-scaler.json",
+          "DependsOn": [
+            "cfstack-Init",
+            "System-Network",
+            "System-SecurityGroup",
+            "System-SharedResources",
+            "CloudWatchLogRetention-CustomResource",
+            "Semaphore-GitHubSshKeyFingerprint",
+            "Semaphore-AzReBalanceSuspender"
+          ],
+          "Parameters": {
+            "NetworkStack": "System-Network",
+            "SemaphoreEndpoint": "clevertap.semaphoreci.com",
+            "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/c7a5ab7e-9ba5-4680-9782-22e77e8520ba.zip",
+            "SemaphoreAgentRootVolumeSize": "30",
+            "SemaphoreAgentAmiId": "ami-0917b009eef00aeec",
+            "SemaphoreAgentInstanceType": "t2.micro",
+            "SemaphoreAgentAsgMaxSize": "100",
+            "SemaphoreAgentAsgMinSize": "0",
+            "BuildAccountProductionAccessIAMRoleArn": "arn:aws:iam::062484260092:role/System-Iam-BuildAccountProductionAccessIAMRole",
+            "BuildAccountDataScienceAccessIAMRoleArn": "arn:aws:iam::796973483800:role/System-Datascience-Iam-BuildAccountProductionAccessIAMRole"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-Agent-s1-ultron-c5-large",
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/agent-scaler.json",
+          "DependsOn": [
+            "cfstack-Init",
+            "System-Network",
+            "System-SecurityGroup",
+            "System-SharedResources",
+            "CloudWatchLogRetention-CustomResource",
+            "Semaphore-GitHubSshKeyFingerprint",
+            "Semaphore-AzReBalanceSuspender"
+          ],
+          "Parameters": {
+            "NetworkStack": "System-Network",
+            "SemaphoreEndpoint": "clevertap.semaphoreci.com",
+            "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/c7a5ab7e-9ba5-4680-9782-22e77e8520ba.zip",
+            "SemaphoreAgentRootVolumeSize": "30",
+            "SemaphoreAgentAmiId": "ami-0917b009eef00aeec",
+            "SemaphoreAgentInstanceType": "c5.large",
+            "SemaphoreAgentAsgMaxSize": "100",
+            "SemaphoreAgentAsgMinSize": "0",
+            "BuildAccountProductionAccessIAMRoleArn": "arn:aws:iam::062484260092:role/System-Iam-BuildAccountProductionAccessIAMRole",
+            "BuildAccountDataScienceAccessIAMRoleArn": "arn:aws:iam::796973483800:role/System-Datascience-Iam-BuildAccountProductionAccessIAMRole"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-Agent-s1-ultron-c5-xlarge",
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/agent-scaler.json",
+          "DependsOn": [
+            "cfstack-Init",
+            "System-Network",
+            "System-SecurityGroup",
+            "System-SharedResources",
+            "CloudWatchLogRetention-CustomResource",
+            "Semaphore-GitHubSshKeyFingerprint",
+            "Semaphore-AzReBalanceSuspender"
+          ],
+          "Parameters": {
+            "NetworkStack": "System-Network",
+            "SemaphoreEndpoint": "clevertap.semaphoreci.com",
+            "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/c7a5ab7e-9ba5-4680-9782-22e77e8520ba.zip",
+            "SemaphoreAgentRootVolumeSize": "30",
+            "SemaphoreAgentAmiId": "ami-0917b009eef00aeec",
+            "SemaphoreAgentInstanceType": "c5.xlarge",
+            "SemaphoreAgentAsgMaxSize": "100",
+            "SemaphoreAgentAsgMinSize": "0",
+            "BuildAccountProductionAccessIAMRoleArn": "arn:aws:iam::062484260092:role/System-Iam-BuildAccountProductionAccessIAMRole",
+            "BuildAccountDataScienceAccessIAMRoleArn": "arn:aws:iam::796973483800:role/System-Datascience-Iam-BuildAccountProductionAccessIAMRole"
+          },
+          "StackPolicy": {}
+        }
+      ]
+    }
+  ]
+}

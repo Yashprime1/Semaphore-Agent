@@ -1,0 +1,101 @@
+name: Upload-Lambda-Source-Code-And-Binaries
+
+run-name: upload-lambda-source-code-and-binaries-${{ github.ref_name }}-${{ github.run_number }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      Region:
+        description: "AWS Region"
+        required: false
+        default: "eu-west-1"
+
+env:
+  CF_STACK_VERSION: 0.2.22
+
+jobs:
+  upload-lambda-source-code-and-binaries:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v2.1.0
+        with:
+          app_id: ${{ secrets.CLEVERTAP_SNE_BOT_ID }}
+          private_key: ${{ secrets.CLEVERTAP_SNE_BOT_PRIVATE_ACCESS_KEY }}
+
+      - name: Checkout agent-aws-stack repo
+        uses: actions/checkout@v4
+        with:
+          repository: renderedtext/agent-aws-stack
+          ref: v0.3.6
+          show-progress: 'false'
+
+      - name: Checkout Build-Cloudformation repo
+        uses: actions/checkout@v4
+        with:
+          path: build-cloudformation
+          show-progress: 'false'
+
+      - name: Install python requirements
+        working-directory: build-cloudformation
+        run: |
+          set -euxo pipefail
+          python3 -m venv dev-venv
+          source dev-venv/bin/activate
+          pip3 install pytablewriter boto3 argparse
+          deactivate
+
+      - name: Install CFStack Binary
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: CleverTap-SNE/CFStack
+          tag: v${{ env.CF_STACK_VERSION }}
+          fileName: CFStack_${{ env.CF_STACK_VERSION }}_linux_amd64
+          token: ${{ steps.generate_token.outputs.token }}
+
+      - name: Rename cfstack binary
+        run: |
+          set -euxo pipefail
+          mkdir -p source-s3-bucket-contents/cfstack
+          mv CFStack_${{ env.CF_STACK_VERSION }}_linux_amd64 source-s3-bucket-contents/cfstack/cfstack
+          chmod +x source-s3-bucket-contents/cfstack/*     
+
+      - name: Create a zip file for all lambda functions
+        run: |
+          set -euxo pipefail
+          
+          present_working_dir=$(pwd)
+          mkdir -p source-s3-bucket-contents/lambda/agent-scaler
+          cd lambdas/agent-scaler/
+          zip -r $present_working_dir/source-s3-bucket-contents/lambda/agent-scaler/$(uuidgen | tr 'A-Z' 'a-z').zip app.js
+          cd $present_working_dir
+          
+          mkdir -p source-s3-bucket-contents/lambda/az-rebalance-suspender
+          cd lambdas/az-rebalance-suspender/
+          zip -r $present_working_dir/source-s3-bucket-contents/lambda/az-rebalance-suspender/$(uuidgen | tr 'A-Z' 'a-z').zip app.js
+          cd $present_working_dir
+          
+          mkdir -p source-s3-bucket-contents/lambda/github-ssh-key-fingerprint-synchronizer
+          cd lambdas/ssh-keys-updater/
+          zip -r $present_working_dir/source-s3-bucket-contents/lambda/github-ssh-key-fingerprint-synchronizer/$(uuidgen | tr 'A-Z' 'a-z').zip app.js
+          cd $present_working_dir
+          
+          mkdir -p source-s3-bucket-contents/lambda/custom-resources-provider-framework
+          cd build-cloudformation/custom-resources-provider-framework
+          zip -r $present_working_dir/source-s3-bucket-contents/lambda/custom-resources-provider-framework/$(uuidgen | tr 'A-Z' 'a-z').zip *
+          cd $present_working_dir
+
+      - name: Upload lambda source code and binaries to s3 bucket
+        working-directory: build-cloudformation
+        run: |
+          set -euxo pipefail
+          source dev-venv/bin/activate
+          source_code_s3_bucket_name=$(python3 scripts/get_resource_physical_id.py --stack-name cfstack-Init --logical-id SourceS3Bucket)
+          python3 scripts/upload_source_s3_contents.py --source-s3-bucket-name ${source_code_s3_bucket_name} --source-s3-bucket-contents-directory-path ../source-s3-bucket-contents
+          deactivate
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ inputs.Region }}
+

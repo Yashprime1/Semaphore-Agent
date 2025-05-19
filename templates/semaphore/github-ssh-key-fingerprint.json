@@ -1,0 +1,176 @@
+{
+  "Parameters": {
+    "GitHubSshKeyFingerprintSyncLambdaCodeS3Key": {
+      "Type": "String",
+      "Description": "GitHub ssh key fingerprint sync lambda code s3 key"
+    },
+    "GithubPublicSshKeyFingerprint": {
+      "Type": "String",
+      "Description": "Public key fingerprint to validate a connection to a remote server"
+    }
+  },
+  "Resources": {
+    "GithubPublicSshKeyFingerprintSSMParameter": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Description": "GitHub public key fingerprint to validate a connection to a remote server",
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-SSM-Parameter"
+        },
+        "Tier": "Standard",
+        "Type": "String",
+        "Value": {
+            "Ref" : "GithubPublicSshKeyFingerprint"
+        }
+      }
+    },
+    "GitHubSshKeyFingerprintSyncLambdaIamRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        ]
+      }
+    },
+    "GitHubSshKeyFingerprintSyncLambdaIamPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "GitHubSshKeyFingerprintSyncLambdaIamRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ssm:GetParameter",
+                "ssm:PutParameter"
+              ],
+              "Resource": {
+                "Fn::Sub": "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GithubPublicSshKeyFingerprintSSMParameter}"
+              }
+            }
+          ]
+        },
+        "PolicyName": {
+          "Fn::Sub": "${AWS::StackName}-GitHubSshKeyFingerprintSyncLambdaIamPolicy"
+        }
+      }
+    },
+    "GitHubSshKeyFingerprintSyncLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::ImportValue": "cfstack-Init-SourceS3BucketName"
+          },
+          "S3Key": {
+            "Ref": "GitHubSshKeyFingerprintSyncLambdaCodeS3Key"
+          }
+        },
+        "Description": "Lambda function to synchronize GitHub SSH public keys when they are updated",
+        "Handler": "app.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "GitHubSshKeyFingerprintSyncLambdaIamRole",
+            "Arn"
+          ]
+        },
+        "Runtime": "nodejs18.x",
+        "Timeout": 10,
+        "Environment": {
+          "Variables": {
+            "SSM_PARAMETER": {
+              "Ref": "GithubPublicSshKeyFingerprintSSMParameter"
+            }
+          }
+        }
+      }
+    },
+    "GithubSshKeyFingerprintSyncLambdaCloudwatchLogsCustomLogRetention": {
+      "Type": "Custom::LogRetention",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::ImportValue": "CloudWatchLogRetention-CustomResource-LogRetentionLambdaFunctionArn"
+        },
+        "LogGroupName": {
+          "Fn::Join": [
+            "",
+            [
+              "/aws/lambda/",
+              {
+                "Ref": "GitHubSshKeyFingerprintSyncLambdaFunction"
+              }
+            ]
+          ]
+        },
+        "RetentionInDays": 30
+      }
+    },
+    "GithubSshKeyFingerprintSyncScheduledEventsRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Description": "Rule to dynamically invoke lambda function to synchronize GitHub public SSH keys",
+        "ScheduleExpression": "rate(1 day)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "GitHubSshKeyFingerprintSyncLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "Target0"
+          }
+        ]
+      }
+    },
+    "GithubSshKeyFingerprintSyncScheduledEventsRuleLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "GitHubSshKeyFingerprintSyncLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "GithubSshKeyFingerprintSyncScheduledEventsRule",
+            "Arn"
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "GithubPublicSshKeyFingerprintSSMParameterName": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-GithubPublicSshKeyFingerprintSSMParameterName"
+        }
+      },
+      "Value": {
+        "Ref": "GithubPublicSshKeyFingerprintSSMParameter"
+      }
+    }
+  }
+}

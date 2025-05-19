@@ -1,0 +1,68 @@
+{
+  "Parameters": {
+    "TargetAccountId": {
+      "Type": "String",
+      "Description": "The AWS Account ID within the organization that will receive the shared resources"
+    },
+    "NetworkStack": {
+      "Description": "Name of the stack that this stack references for networking",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "DronaHqRdsProxyEndpointEc2SubnetsRAMResourceShare": {
+      "Type": "AWS::RAM::ResourceShare",
+      "Properties": {
+        "Name": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "DronaHqRdsProxyEndpointEc2Subnets"
+            ]
+          ]
+        },
+        "AllowExternalPrincipals": false,
+        "Principals": [
+          {
+            "Ref": "TargetAccountId"
+          }
+        ],
+        "ResourceArns": [
+          {
+            "Fn::Join": [
+              "/",
+              [
+                {
+                  "Fn::Sub": "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet"
+                },
+                {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-DronaHqRdsProxyEndpointAzAEc2SubnetId"
+                  }
+                }
+              ]
+            ]
+          },
+          {
+            "Fn::Join": [
+              "/",
+              [
+                {
+                  "Fn::Sub": "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:subnet"
+                },
+                {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-DronaHqRdsProxyEndpointAzBEc2SubnetId"
+                  }
+                }
+              ]
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

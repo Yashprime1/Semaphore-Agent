@@ -1,0 +1,51 @@
+name: Build-Default-Semaphore-Agent-Ami
+
+run-name: build-default-semaphore-agent-ami-${{ github.ref_name }}-${{ github.run_number }}
+
+
+on:
+  workflow_dispatch:
+    inputs:
+      Region:
+        description: "AWS Region"
+        required: false
+        default: "eu-west-1"
+
+jobs:
+  build-default-semaphore-agent-ami:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - AmiArch: "x86_64"
+            AmiInstanceType: "t2.micro"
+
+    steps:
+      - name: Checkout agent-aws-stack repo
+        uses: actions/checkout@v4
+        with:
+          repository: renderedtext/agent-aws-stack
+          ref: v0.4.0
+          show-progress: 'false'
+
+      - name: Setup packer
+        uses: hashicorp/setup-packer@v3.1.0
+        with:
+          version: 1.8.1
+
+      - name: Initializing packer template
+        run: |
+          make packer.init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ inputs.Region }}
+
+      - name: Building packer template
+        run: |
+          make packer.build.linux INSTALL_ERLANG=false AMI_INSTANCE_TYPE=${{ matrix.AmiInstanceType }} AMI_ARCH=${{ matrix.AmiArch }} AWS_REGION=${{ inputs.Region }} AMI_PREFIX=semaphore-agent-${{ github.run_id }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ inputs.Region }}

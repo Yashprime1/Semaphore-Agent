@@ -1,0 +1,144 @@
+name: cfstack-diff
+
+run-name: cfstack-diff-${{ github.ref_name }}-${{ github.run_number }}
+
+on:
+  pull_request:
+    branches:
+      - 'master'
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+env:
+  CF_STACK_VERSION: 0.2.22
+
+jobs:
+  diff:
+    concurrency:
+      group: diff-${{ github.ref_name }}
+    runs-on: 'ubuntu-latest'
+    if: (github.event_name != 'workflow_dispatch'
+      || (github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/')))
+      && (github.ref != 'refs/heads/master' || (github.ref == 'refs/heads/master' && github.run_attempt == 1))
+    steps:
+      - name: Generate github token
+        id: generate-github-token
+        uses: tibdex/github-app-token@v2.1.0
+        with:
+          app_id: ${{ secrets.CLEVERTAP_SNE_BOT_ID }}
+          private_key: ${{ secrets.CLEVERTAP_SNE_BOT_PRIVATE_ACCESS_KEY }}
+
+      - name: Checkout Build-Cloudformation repo
+        uses: actions/checkout@v4
+        with:
+          show-progress: 'false'
+
+      - name: Install python requirements
+        run: |
+          set -euxo pipefail
+          python3 -m venv prod-venv
+          source prod-venv/bin/activate
+          pip3 install pytablewriter pyyaml
+          deactivate
+
+      - name: Install CFStack binary
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: CleverTap-SNE/CFStack
+          tag: v${{ env.CF_STACK_VERSION }}
+          fileName: CFStack_${{ env.CF_STACK_VERSION }}_linux_amd64
+          token: ${{ steps.generate-github-token.outputs.token }}
+
+      - name: Make cfstack executable
+        run: |
+          set -euxo pipefail
+          mv CFStack_${{ env.CF_STACK_VERSION }}_linux_amd64 cfstack && chmod +x ./cfstack
+
+      - name: Generate cfstack diff
+        run: |
+          set -euxo pipefail
+          ./cfstack diff --manifest build.manifest.json --values values.json --role ${{ secrets.BUILD_AWS_CLOUDFORMATION_SERVICE_IAM_ROLE }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+
+      - name: Parse comment out of diff.json
+        id: parse_comment
+        run: |
+          set -exou pipefail
+          source prod-venv/bin/activate
+          chmod +x ./scripts/parse-comment
+          ./scripts/parse-comment
+          deactivate
+
+      - name: Comment diff on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6.4.0
+        with:
+          github-token: ${{ steps.generate-github-token.outputs.token }}
+          script: |
+            const fs = require('fs');
+            const filePath = 'comment.txt';
+            fs.readFile(filePath, 'utf8', (err, data) => {
+              if (err) {
+                console.error('Error reading the file:', err);
+                return;
+              }
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: data
+              })
+            });
+
+      - name: Get release date
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master'
+        id: get-release-date
+        run: |
+          set -exou pipefail
+          echo "RELEASE_DATE=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+
+      - name: Create asset
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master'
+        run: |
+          set -exou pipefail
+          zip -qr cloudformation-build.zip .
+
+      - name: Create Draft Release
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master'
+        id: create_release
+        uses: actions/create-release@v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-github-token.outputs.token }}
+        with:
+          tag_name: v${{ steps.get-release-date.outputs.RELEASE_DATE }}.${{ github.run_number }}
+          release_name: v${{ steps.get-release-date.outputs.RELEASE_DATE }}.${{ github.run_number }}
+          draft: true
+          prerelease: false
+
+      - name: Upload assets to the release
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master'
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-github-token.outputs.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: cloudformation-build.zip
+          asset_name: cloudformation-build.zip
+          asset_content_type: application/zip
+
+      - name: Delete older drafted releases
+        uses: sgpublic/delete-release-action@v1.1
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master'
+        with:
+          draft-drop: true
+          draft-drop-count: 0
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-github-token.outputs.token }}
+
+      - name: Publish Release
+        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master'
+        run: |
+          set -exou pipefail
+          echo "You can publish release from here - ${{ steps.create_release.outputs.html_url }}"

@@ -1,0 +1,84 @@
+{
+  "Parameters": {
+    "NetworkStack": {
+      "Description": "Name of the stack that this stack references for networking",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "SemaphoreAgentEc2SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Semaphore agents security group",
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      }
+    },
+    "SemaphoreAgentScalerLambdaEc2SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Scaler lambda security group",
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      }
+    },
+    "RemoteDockerHostEc2SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "security group for docker host",
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "SemaphoreAgentEc2SecurityGroupId": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-SemaphoreAgentEc2SecurityGroupId"
+        }
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "SemaphoreAgentEc2SecurityGroup",
+          "GroupId"
+        ]
+      }
+    },
+    "SemaphoreAgentScalerLambdaEc2SecurityGroupId": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-SemaphoreAgentScalerLambdaEc2SecurityGroupId"
+        }
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "SemaphoreAgentScalerLambdaEc2SecurityGroup",
+          "GroupId"
+        ]
+      }
+    },
+    "RemoteDockerHostEc2SecurityGroupId": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-RemoteDockerHostEc2SecurityGroupId"
+        }
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "RemoteDockerHostEc2SecurityGroup",
+          "GroupId"
+        ]
+      }
+    }
+  }
+}
