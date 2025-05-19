@@ -8,7 +8,7 @@
     {
       "ami_name": "ultron-{{ user `source_image_name` }}-{{ timestamp }}",
       "instance_type": "{{user `instance_type`}}",
-      "iam_instance_profile": "System-SharedResources-PackerEc2InstanceIamProfile-AxZ7pj1YiIA4",
+      "iam_instance_profile": "System-SharedResources-PackerEc2InstanceIamProfile-sTs5SePHjF83",
       "region": "{{user `aws_region`}}",
       "skip_region_validation": true,
       "ami_description": "CleverTap customized semaphore instance {{ .SourceAMIName }}",
