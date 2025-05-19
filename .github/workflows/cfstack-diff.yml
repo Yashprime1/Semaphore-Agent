@@ -25,8 +25,8 @@ jobs:
         id: generate-github-token
         uses: tibdex/github-app-token@v2.1.0
         with:
-          app_id: ${{ secrets.CLEVERTAP_SNE_BOT_ID }}
-          private_key: ${{ secrets.CLEVERTAP_SNE_BOT_PRIVATE_ACCESS_KEY }}
+          app_id: ${{ secrets.DUMMY_BOT_ID }}
+          private_key: ${{ secrets.DUMMY_BOT_PRIVATE_ACCESS_KEY }}
 
       - name: Checkout Build-Cloudformation repo
         uses: actions/checkout@v4
@@ -41,18 +41,11 @@ jobs:
           pip3 install pytablewriter pyyaml
           deactivate
 
-      - name: Install CFStack binary
-        uses: robinraju/release-downloader@v1.8
-        with:
-          repository: CleverTap-SNE/CFStack
-          tag: v${{ env.CF_STACK_VERSION }}
-          fileName: CFStack_${{ env.CF_STACK_VERSION }}_linux_amd64
-          token: ${{ steps.generate-github-token.outputs.token }}
 
       - name: Make cfstack executable
         run: |
           set -euxo pipefail
-          mv CFStack_${{ env.CF_STACK_VERSION }}_linux_amd64 cfstack && chmod +x ./cfstack
+          chmod +x ./cfstack
 
       - name: Generate cfstack diff
         run: |
