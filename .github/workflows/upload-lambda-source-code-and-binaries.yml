@@ -46,20 +46,6 @@ jobs:
           pip3 install pytablewriter boto3 argparse
           deactivate
 
-      - name: Install CFStack Binary
-        uses: robinraju/release-downloader@v1.8
-        with:
-          repository: CleverTap-SNE/CFStack
-          tag: v${{ env.CF_STACK_VERSION }}
-          fileName: CFStack_${{ env.CF_STACK_VERSION }}_linux_amd64
-          token: ${{ steps.generate_token.outputs.token }}
-
-      - name: Rename cfstack binary
-        run: |
-          set -euxo pipefail
-          mkdir -p source-s3-bucket-contents/cfstack
-          mv CFStack_${{ env.CF_STACK_VERSION }}_linux_amd64 source-s3-bucket-contents/cfstack/cfstack
-          chmod +x source-s3-bucket-contents/cfstack/*     
 
       - name: Create a zip file for all lambda functions
         run: |
