@@ -378,7 +378,7 @@
                 "VolumeType": {
                   "Ref": "SemaphoreAgentRootVolumeType"
                 },
-                "Iops": "16000"
+                "Iops": "5000"
               }
             }
           ],
