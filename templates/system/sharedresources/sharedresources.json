@@ -40,6 +40,34 @@
       },
       "Type": "AWS::S3::Bucket"
     },
+    "SemaphoreAuditLogsS3Bucket": {
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "ExpirationInDays": 30,
+              "Status": "Enabled"
+            }
+          ]
+        }
+      },
+      "Type": "AWS::S3::Bucket"
+    },
     "PackerEc2InstanceIamRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -316,6 +344,29 @@
       "Value": {
         "Fn::GetAtt": [
           "SemaphoreCachingS3Bucket",
+          "Arn"
+        ]
+      }
+    },
+    "SemaphoreAuditLogsS3BucketName": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-SemaphoreAuditLogsS3BucketName"
+        }
+      },
+      "Value": {
+        "Ref": "SemaphoreAuditLogsS3Bucket"
+      }
+    },
+    "SemaphoreAuditLogsS3BucketArn": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-SemaphoreAuditLogsS3BucketArn"
+        }
+      },
+      "Value": {
+        "Fn::GetAtt": [
+          "SemaphoreAuditLogsS3Bucket",
           "Arn"
         ]
       }
