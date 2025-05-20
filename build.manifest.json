@@ -111,7 +111,7 @@
           ],
           "Parameters": {
             "AzReBalanceSuspenderLambdaCodeS3Key": "lambda/az-rebalance-suspender/a3235f0c-2fbb-402b-aae0-10cd6854b909.zip",
-            "AzReBalanceSuspenderProviderFrameworkOnEventLambdaCodeS3Key": "lambda/custom-resources-provider-framework/d1c1d2d8-6cc2-46e9-918e-66f77cff91c0.zip"
+            "AzReBalanceSuspenderProviderFrameworkOnEventLambdaCodeS3Key": "lambda/custom-resources-provider-framework/864012af-6c81-4c07-9e30-fd55de4debc3.zip"
           },
           "StackPolicy": {}
         },
