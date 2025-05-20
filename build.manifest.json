@@ -42,7 +42,7 @@
           "StackPolicy": {}
         },
         {
-          "StackName": "c",
+          "StackName": "System-SecurityGroup",
           "Action": "CREATE",
           "TemplatePath": "templates/security-group/security-group.json",
           "DependsOn": [
