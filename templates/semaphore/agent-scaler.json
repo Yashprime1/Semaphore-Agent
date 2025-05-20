@@ -28,6 +28,11 @@
       "Default": "30",
       "Description": "Semaphore agent root volume size"
     },
+    "SemaphoreAgentRootVolumeType": {
+      "Type": "String",
+      "Default": "gp2",
+      "Description": "Semaphore agent root volume type"
+    },
     "SemaphoreAgentAmiId": {
       "Type": "String",
       "Description": "Semaphore Agent Ami Id"
@@ -370,7 +375,9 @@
                 "VolumeSize": {
                   "Ref": "SemaphoreAgentRootVolumeSize"
                 },
-                "VolumeType": "gp2"
+                "VolumeType": {
+                  "Ref": "SemaphoreAgentRootVolumeType"
+                }
               }
             }
           ],
