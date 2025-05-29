@@ -428,7 +428,7 @@
           ],
           "UserData": {
             "Fn::Base64": {
-              "Fn::Sub": "#!/bin/bash\n/opt/semaphore/agent/start.sh ${SemaphoreAgentConfigSsmParameter}"
+              "Fn::Sub": "#!/bin/bash\necho 'export SEMAPHORE_TOOLBOX_VERSION=v1.26.0' >> /etc/environment && /opt/semaphore/agent/start.sh ${SemaphoreAgentConfigSsmParameter}"
             }
           }
         },
