@@ -93,6 +93,7 @@ export PATH=$PATH:/opt/node-v20.10.0-linux-x64/bin
 npm install --global yarn
 echo 'export PATH=/opt/node-v14.18.2-linux-x64/bin:$PATH' >> /etc/profile.d/semaphore.sh
 echo 'export PATH=/opt/node-v20.10.0-linux-x64/bin:$PATH' >> /etc/profile.d/semaphore.sh
+echo 'export SEMAPHORE_TOOLBOX_VERSION=v1.26.0' >> /etc/profile.d/semaphore.sh
 
 curl -fL https://getcli.jfrog.io | sh &&  mv jfrog /usr/bin/ &&  chmod +x /usr/bin/jfrog
 
