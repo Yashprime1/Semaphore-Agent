@@ -428,7 +428,7 @@
           ],
           "UserData": {
             "Fn::Base64": {
-              "Fn::Sub": "#!/bin/bash\n/opt/semaphore/agent/start.sh ${SemaphoreAgentConfigSsmParameter}"
+              "Fn::Sub": "#!/bin/bash\nsource /etc/profile.d/semaphore.sh && /opt/semaphore/agent/start.sh ${SemaphoreAgentConfigSsmParameter}"
             }
           }
         },
