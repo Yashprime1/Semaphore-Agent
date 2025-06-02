@@ -108,6 +108,14 @@ echo 'export PATH=/opt/amazon-corretto-11.0.19.7.1-linux-x64/bin:/opt/apache-mav
 
 echo "Add private key to semaphore home directory"
 echo "export MAVEN_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
+# Source the environment and create override
+source /etc/profile.d/semaphore.sh
+sudo tee /etc/systemd/system/semaphore-agent.service.d/environment.conf << EOF
+[Service]
+Environment="SEMAPHORE_TOOLBOX_VERSION=$SEMAPHORE_TOOLBOX_VERSION"
+Environment="MAVEN_HOME=$MAVEN_HOME"
+Environment="PATH=$PATH"
+EOF
 echo "Setting maven home"
 echo "fs.file-max=1000000" >> /etc/sysctl.conf
 ls -lrth /etc/sysctl.conf
