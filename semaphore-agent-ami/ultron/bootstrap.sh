@@ -93,7 +93,6 @@ export PATH=$PATH:/opt/node-v20.10.0-linux-x64/bin
 npm install --global yarn
 echo 'export PATH=/opt/node-v14.18.2-linux-x64/bin:$PATH' >> /etc/profile.d/semaphore.sh
 echo 'export PATH=/opt/node-v20.10.0-linux-x64/bin:$PATH' >> /etc/profile.d/semaphore.sh
-echo 'export SEMAPHORE_TOOLBOX_VERSION=v1.26.0' >> /etc/profile.d/semaphore.sh
 
 curl -fL https://getcli.jfrog.io | sh &&  mv jfrog /usr/bin/ &&  chmod +x /usr/bin/jfrog
 
@@ -112,7 +111,6 @@ echo "export MAVEN_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
 source /etc/profile.d/semaphore.sh
 sudo tee /etc/systemd/system/semaphore-agent.service.d/environment.conf << EOF
 [Service]
-Environment="SEMAPHORE_TOOLBOX_VERSION=$SEMAPHORE_TOOLBOX_VERSION"
 Environment="MAVEN_HOME=$MAVEN_HOME"
 Environment="PATH=$PATH"
 EOF
