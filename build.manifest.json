@@ -134,7 +134,7 @@
             "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/0c0b08fd-ef06-4d47-9bc6-461b7f0db8bd.zip",
             "SemaphoreAgentRootVolumeSize": "100",
             "SemaphoreAgentRootVolumeType": "io1",
-            "SemaphoreAgentAmiId": "ami-07504c846ebc26518",
+            "SemaphoreAgentAmiId": "ami-03a90737a7fca46ae",
             "SemaphoreAgentInstanceType": "c5.12xlarge",
             "SemaphoreAgentAsgMaxSize": "75",
             "SemaphoreAgentAsgMinSize": "0",
