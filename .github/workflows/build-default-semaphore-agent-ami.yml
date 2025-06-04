@@ -1,7 +1,6 @@
-name: Build-Default-Semaphore-Agent-Ami
+name: Copy-S3-Packages-To-Semaphore-Agent
 
-run-name: build-default-semaphore-agent-ami-${{ github.ref_name }}-${{ github.run_number }}
-
+run-name: copy-s3-packages-${{ github.ref_name }}-${{ github.run_number }}
 
 on:
   workflow_dispatch:
@@ -12,40 +11,56 @@ on:
         default: "eu-west-1"
 
 jobs:
-  build-default-semaphore-agent-ami:
+  copy-s3-packages:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - AmiArch: "x86_64"
-            AmiInstanceType: "t2.micro"
-
+    
     steps:
-      - name: Checkout agent-aws-stack repo
-        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          repository: renderedtext/agent-aws-stack
-          ref: v0.4.0
-          show-progress: 'false'
+          aws-access-key-id: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.Region }}
 
-      - name: Setup packer
-        uses: hashicorp/setup-packer@v3.1.0
-        with:
-          version: 1.8.1
-
-      - name: Initializing packer template
+      - name: Create local directories
         run: |
-          make packer.init
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ inputs.Region }}
+          mkdir -p ./local-packages/node-v18-18-1
+          mkdir -p ./local-packages/node-v18-18-2
+          mkdir -p ./local-packages/node-v14-18-2
+          mkdir -p ./local-packages/jq
 
-      - name: Building packer template
+      - name: Copy packages from source S3 to local
         run: |
-          make packer.build.linux INSTALL_ERLANG=false AMI_INSTANCE_TYPE=${{ matrix.AmiInstanceType }} AMI_ARCH=${{ matrix.AmiArch }} AWS_REGION=${{ inputs.Region }} AMI_PREFIX=semaphore-agent-${{ github.run_id }} TOOLBOX_VERSION=v1.26.0
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ inputs.Region }}
+          echo "Copying node-v18-18-1..."
+          aws s3 cp s3://bamboo-packages/node-v18-18-1/ ./local-packages/node-v18-18-1/ --recursive
+          
+          echo "Copying node-v18-18-2..."
+          aws s3 cp s3://bamboo-packages/node-v18-18-2/ ./local-packages/node-v18-18-2/ --recursive
+          
+          echo "Copying node-v14-18-2..."
+          aws s3 cp s3://bamboo-packages/node-v14-18-2/ ./local-packages/node-v14-18-2/ --recursive
+          
+          echo "Copying jq..."
+          aws s3 cp s3://bamboo-packages/jq/ ./local-packages/jq/ --recursive
+
+      - name: Verify local files
+        run: |
+          echo "Verifying downloaded files..."
+          find ./local-packages -type f -exec ls -la {} \;
+          echo "Total files downloaded: $(find ./local-packages -type f | wc -l)"
+
+      - name: Copy packages from local to destination S3
+        run: |
+          echo "Uploading packages to destination S3..."
+          aws s3 cp ./local-packages/ s3://system-sharedresources-ssms3bucket-fp7gg9zzae0f/semaphore-agent/ --recursive
+
+      - name: Verify destination S3 upload
+        run: |
+          echo "Verifying files in destination S3..."
+          aws s3 ls s3://system-sharedresources-ssms3bucket-fp7gg9zzae0f/semaphore-agent/ --recursive
+
+      - name: Cleanup local files
+        run: |
+          echo "Cleaning up local files..."
+          rm -rf ./local-packages
+          echo "Cleanup completed"
