@@ -135,7 +135,7 @@
             "SemaphoreAgentRootVolumeSize": "100",
             "SemaphoreAgentRootVolumeType": "io1",
             "SemaphoreAgentAmiId": "ami-07c8d8d583a808c97",
-            "SemaphoreAgentInstanceType": "c5.12xlarge",
+            "SemaphoreAgentInstanceType": "r5.12xlarge",
             "SemaphoreAgentAsgMaxSize": "75",
             "SemaphoreAgentAsgMinSize": "0",
             "EnableStandaloneSemaphoreAgent": "false",
