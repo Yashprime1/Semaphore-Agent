@@ -1,0 +1,46 @@
+{
+  "variables": {
+    "instance_type": "{{env `BUILD_INSTANCE_TYPE`}}",
+    "source_image_name": "{{env `BUILD_SOURCE_IMAGE_NAME`}}",
+    "aws_region": "{{env `AWS_REGION`}}"
+  },
+  "builders": [
+    {
+      "ami_name": "ultron-{{ user `source_image_name` }}-{{ timestamp }}",
+      "instance_type": "{{user `instance_type`}}",
+      "iam_instance_profile": "System-SharedResources-PackerEc2InstanceIamProfile-sTs5SePHjF83",
+      "region": "{{user `aws_region`}}",
+      "skip_region_validation": true,
+      "ami_description": "CleverTap customized semaphore instance {{ .SourceAMIName }}",
+      "ami_virtualization_type": "hvm",
+      "shutdown_behavior": "terminate",
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "{{user `source_image_name`}}",
+          "root-device-type": "ebs"
+        },
+        "most_recent": true
+      },
+      "name": "with-tools-{{ user `source_image_name` }}-{{ timestamp }}",
+      "type": "amazon-ebs",
+      "ssh_username": "ubuntu",
+      "run_tags": {
+        "Name": "Packer Builder"
+      },
+      "tags": {
+        "Name": "with-tools-{{ .SourceAMIName }}-{{ timestamp }}",
+        "Base_AMI_Name": "{{ .SourceAMIName }}",
+        "Base_AMI_Id": "{{ .SourceAMI }}",
+        "Extra": "{{ .SourceAMITags.TagName }}"
+      }
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "semaphore-agent-ami/with-tools/bootstrap.sh",
+      "execute_command": "echo 'packer' | sudo -S env {{ .Vars }} {{ .Path }}"
+    }
+  ]
+}
