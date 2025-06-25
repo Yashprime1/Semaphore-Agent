@@ -1,4 +1,4 @@
-name: Build-Ultron-Semaphore-Agent-Ami
+name: Build-Semaphore-Agent-with-tools-Ami
 
 run-name: build-ultron-semaphore-agent-ami-${{ github.ref_name }}-${{ github.run_number }}
 
