@@ -214,11 +214,7 @@
                 "logs:CreateLogStream",
                 "logs:PutLogEvents"
               ],
-              "Resource": {
-                "Fn::ImportValue": {
-                  "Fn::Sub": "${NetworkStack}-SharedResources-SsmLogsLogGroupArn"
-                }
-              }
+              "Resource": "*"
             },
             {
               "Sid": "AllowSsmAgentToPutLogsToS3",
