@@ -484,6 +484,182 @@
         }
       },
       "Type": "AWS::ECS::Service"
+    },
+    "SemaphoreAgentEcsTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "ContainerDefinitions": [
+          {
+            "Environment": [
+              {
+                "Name": "SEMAPHORE_AGENT_TOKEN",
+                "Value": {
+                  "Ref": "semaphoreToken"
+                }
+              },
+              {
+                "Name": "SEMAPHORE_AGENT_STACK_NAME",
+                "Value": {
+                  "Ref": "AWS::StackName"
+                }
+              },
+              {
+                "Name": "SEMAPHORE_AGENT_ECS_CLUSTER_NAME",
+                "Value": {
+                  "Fn::ImportValue":{
+                     "Fn::Sub": "${AWS::StackName}-SemaphoreScalerAgentEcsClusterName"
+                  }
+                }
+              },
+              {
+                "Name": "SEMAPHORE_AGENT_ECS_SERVICE_NAME",
+                "Value": {
+                  "Ref": "semaphoreEcsServiceName"
+                }
+              },
+              {
+                "Name": "SEMAPHORE_ENDPOINT",
+                "Value": {
+                  "Ref": "semaphoreEndpoint"
+                }
+              },
+              {
+                "Name":"SEMAPHORE_AGENT_ECS_SERVICE_NAME",
+                "Value":{
+                  "Ref": "semaphoreEcsServiceName"
+                }      
+              },
+              {
+                "Name":"SEMAPHORE_AGENT_OVERPROVISION_STRATEGY",
+                "Value":{
+                  "Ref": "semaphoreOverprovisionStrategy"
+                }
+              },
+              {
+                "Name":"SEMAPHORE_AGENT_OVERPROVISION_FACTOR",
+                "Value":{
+                  "Ref": "semaphoreOverprovisionFactor"
+                }
+              }
+            ],
+            "Essential": true,
+            "Image": "yashprime07/semaphore-agent-scaler:latest",
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": "/ecs/semaphore-agent-scaler",
+                "awslogs-region": "us-east-1",
+                "awslogs-stream-prefix": "ecs"
+              }
+            },
+            "MemoryReservation": 128,
+            "Name": {
+              "Ref": "AWS::StackName"
+            },
+            "Privileged": false,
+            "ReadonlyRootFilesystem": false,
+            "User": "nextjs",
+            "Ulimits": [
+              {
+                "HardLimit": 900000,
+                "Name": "nofile",
+                "SoftLimit": 900000
+              }
+            ]
+          }
+        ],
+        "Cpu": {
+          "Ref": "Cpu"
+        },
+        "Memory": {
+          "Ref": "Memory"
+        },
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "SemaphoreScalerAgentEcsTaskDefinitionIamRole",
+            "Arn"
+          ]
+        },
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "SemaphoreScalerAgentEcsTaskDefinitionTaskRole",
+            "Arn"
+          ]
+        },
+        "Family": {
+          "Ref": "AWS::StackName"
+        },
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ]
+      }
+    },
+    "SemaphoreAgentEcsService": {
+      "Properties": {
+        "Cluster": {
+          "Fn::ImportValue":{
+              "Fn::Sub": "${AWS::StackName}-SemaphoreScalerAgentEcsClusterName"
+          }
+        },
+        "DeploymentConfiguration": {
+          "MaximumPercent": {
+            "Ref": "MaximumPercent"
+          },
+          "MinimumHealthyPercent": {
+            "Ref": "MinimumHealthyPercent"
+          },
+          "DeploymentCircuitBreaker": {
+            "Enable":   true,
+            "Rollback": true
+          }
+        },
+        "DesiredCount": {
+          "Ref": "DesiredCapacity"
+        },
+        "LaunchType": "FARGATE",
+        "EnableExecuteCommand": true,
+        "PropagateTags": "SERVICE",
+        "Tags": [
+          {
+            "Key": "ct-aws:cloudformation:stack-name",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          }
+        ],
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "DISABLED",
+            "SecurityGroups": [
+              {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${NetworkStack}-SecurityGroup-PromotionsSemaphoreScalerAgentEc2SecurityGroupId"
+                }
+              }
+            ],
+            "Subnets": [
+                  {
+                    "Fn::ImportValue": {
+                      "Fn::Sub": "${AWS::StackName}-PrivateAzAEc2SubnetId"
+                    }
+                  },
+                  {
+                    "Fn::ImportValue": {
+                      "Fn::Sub": "${AWS::StackName}-PrivateAzBEc2SubnetId"
+                    }
+                  }
+            ]
+          }
+        },
+        "ServiceName": {
+          "Ref": "AWS::StackName"
+        },
+        "TaskDefinition": {
+          "Ref": "SemaphoreScalerAgentEcsTaskDefinition"
+        }
+      },
+      "Type": "AWS::ECS::Service"
     }
   }
 }
