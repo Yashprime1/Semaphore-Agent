@@ -37,7 +37,7 @@
     },
     "SemaphoreOverprovisionStrategy": {
       "Type": "String",
-      "Description": "Overprovision strategy for Semaphore Agent Scaler",
+      "Description": "Overprovision strategy for Semaphore Agent Scaler"
     },
     "SemaphoreOverprovisionFactor": {
       "Type": "String",
