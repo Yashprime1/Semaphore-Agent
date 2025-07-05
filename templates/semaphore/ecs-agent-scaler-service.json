@@ -4,9 +4,6 @@
       "Description": "Name of the stack that this stack references for networking and shared resources",
       "Type": "String"
     },
-    "ContainerTag": {
-      "Type": "String"
-    },
     "Cpu": {
       "Type": "String"
     },
