@@ -634,7 +634,7 @@
           "Ref": "AWS::StackName"
         },
         "TaskDefinition": {
-          "Ref": "SemaphoreScalerAgentEcsTaskDefinition"
+          "Ref": "SemaphoreAgentEcsTaskDefinition"
         }
       },
       "Type": "AWS::ECS::Service"
