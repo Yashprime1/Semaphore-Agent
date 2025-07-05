@@ -31,10 +31,6 @@
       "Type": "String",
       "Description": "Semaphore API Endpoint to connect to"   
     },
-    "semaphoreEcsServiceName": {
-      "Type": "String",
-      "Description": "Name of the Semaphore ECS Service"
-    },
     "SemaphoreOverprovisionStrategy": {
       "Type": "String",
       "Description": "Overprovision strategy for Semaphore Agent Scaler"
@@ -338,7 +334,7 @@
               {
                 "Name": "SEMAPHORE_AGENT_ECS_SERVICE_NAME",
                 "Value": {
-                  "Ref": "semaphoreEcsServiceName"
+                  "Ref": "SemaphoreAgentEcsService"
                 }
               },
               {
@@ -346,12 +342,6 @@
                 "Value": {
                   "Ref": "SemaphoreEndpoint"
                 }
-              },
-              {
-                "Name":"SEMAPHORE_AGENT_ECS_SERVICE_NAME",
-                "Value":{
-                  "Ref": "semaphoreEcsServiceName"
-                }      
               },
               {
                 "Name":"SEMAPHORE_AGENT_OVERPROVISION_STRATEGY",
@@ -512,22 +502,10 @@
                 }
               },
               {
-                "Name": "SEMAPHORE_AGENT_ECS_SERVICE_NAME",
-                "Value": {
-                  "Ref": "semaphoreEcsServiceName"
-                }
-              },
-              {
                 "Name": "SEMAPHORE_ENDPOINT",
                 "Value": {
                   "Ref": "SemaphoreEndpoint"
                 }
-              },
-              {
-                "Name":"SEMAPHORE_AGENT_ECS_SERVICE_NAME",
-                "Value":{
-                  "Ref": "semaphoreEcsServiceName"
-                }      
               },
               {
                 "Name":"SEMAPHORE_AGENT_OVERPROVISION_STRATEGY",
