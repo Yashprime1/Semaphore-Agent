@@ -23,11 +23,11 @@
     "MinimumHealthyPercent": {
       "Type": "String"
     },
-    "semaphoreToken": {
+    "SemaphoreToken": {
       "Type": "String",
       "Description": "Semaphore Agent Token to authenticate with Semaphore API"
     },
-    "semaphoreEndpoint": {
+    "SemaphoreEndpoint": {
       "Type": "String",
       "Description": "Semaphore API Endpoint to connect to"   
     },
@@ -35,11 +35,11 @@
       "Type": "String",
       "Description": "Name of the Semaphore ECS Service"
     },
-    "semaphoreOverprovisionStrategy": {
+    "SemaphoreOverprovisionStrategy": {
       "Type": "String",
       "Description": "Overprovision strategy for Semaphore Agent Scaler",
     },
-    "semaphoreOverprovisionFactor": {
+    "SemaphoreOverprovisionFactor": {
       "Type": "String",
       "Description": "Overprovision factor for Semaphore Agent Scaler"
     }
@@ -318,7 +318,7 @@
               {
                 "Name": "SEMAPHORE_AGENT_TOKEN",
                 "Value": {
-                  "Ref": "semaphoreToken"
+                  "Ref": "SemaphoreToken"
                 }
               },
               {
@@ -344,7 +344,7 @@
               {
                 "Name": "SEMAPHORE_ENDPOINT",
                 "Value": {
-                  "Ref": "semaphoreEndpoint"
+                  "Ref": "SemaphoreEndpoint"
                 }
               },
               {
@@ -356,18 +356,18 @@
               {
                 "Name":"SEMAPHORE_AGENT_OVERPROVISION_STRATEGY",
                 "Value":{
-                  "Ref": "semaphoreOverprovisionStrategy"
+                  "Ref": "SemaphoreOverprovisionStrategy"
                 }
               },
               {
                 "Name":"SEMAPHORE_AGENT_OVERPROVISION_FACTOR",
                 "Value":{
-                  "Ref": "semaphoreOverprovisionFactor"
+                  "Ref": "SemaphoreOverprovisionFactor"
                 }
               }
             ],
             "Essential": true,
-            "Image": "yashprime07/semaphore-agent-scaler:latest",
+            "Image": "httpd:latest",
             "LogConfiguration": {
               "LogDriver": "awslogs",
               "Options": {
@@ -494,7 +494,7 @@
               {
                 "Name": "SEMAPHORE_AGENT_TOKEN",
                 "Value": {
-                  "Ref": "semaphoreToken"
+                  "Ref": "SemaphoreToken"
                 }
               },
               {
@@ -520,7 +520,7 @@
               {
                 "Name": "SEMAPHORE_ENDPOINT",
                 "Value": {
-                  "Ref": "semaphoreEndpoint"
+                  "Ref": "SemaphoreEndpoint"
                 }
               },
               {
@@ -532,13 +532,13 @@
               {
                 "Name":"SEMAPHORE_AGENT_OVERPROVISION_STRATEGY",
                 "Value":{
-                  "Ref": "semaphoreOverprovisionStrategy"
+                  "Ref": "SemaphoreOverprovisionStrategy"
                 }
               },
               {
                 "Name":"SEMAPHORE_AGENT_OVERPROVISION_FACTOR",
                 "Value":{
-                  "Ref": "semaphoreOverprovisionFactor"
+                  "Ref": "SemaphoreOverprovisionFactor"
                 }
               }
             ],

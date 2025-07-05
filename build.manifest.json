@@ -154,6 +154,29 @@
           "Parameters": {
           },
           "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-Agent-Scaler-Service",
+          "Action": "CREATE",
+          "TemplatePath":  "templates/semaphore/ecs-agent-scaler-service.json",
+          "DependsOn": [
+            "cfstack-Init",
+            "System-Network",
+            "System-SecurityGroup"
+          ],
+          "Parameters": {
+            "NetworkStack": "System-Network",
+            "Cpu":"256",
+            "Memory":"512",
+            "DesiredCapacity": "1",
+            "MaximumPercent": "200",
+            "MinimumHealthyPercent": "100",
+            "SemaphoreToken":"abc",
+            "SemaphoreEndpoint": "clevertap.semaphoreci.com",
+            "SemaphoreOverprovisionStrategy": "none",
+            "SemaphoreOverprovisionFactor": "0"
+          },
+          "StackPolicy": {}
         }
       ]
     }
