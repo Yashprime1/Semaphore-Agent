@@ -1,0 +1,20 @@
+{
+  "Resources": {
+    "SemaphoreScalerAgentEcsCluster": {
+      "Type": "AWS::ECS::Cluster",
+      "Properties": {}
+    }
+  },
+  "Outputs": {
+    "SemaphoreScalerAgentEcsClusterName": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-Service-SemaphoreScalerAgentEcsClusterName"
+        }
+      },
+      "Value": {
+        "Ref": "SemaphoreScalerAgentEcsCluster"
+      }
+    }
+  }
+}

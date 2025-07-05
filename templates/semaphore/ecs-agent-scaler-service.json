@@ -1,0 +1,489 @@
+{
+  "Parameters": {
+    "NetworkStack": {
+      "Description": "Name of the stack that this stack references for networking and shared resources",
+      "Type": "String"
+    },
+    "ContainerTag": {
+      "Type": "String"
+    },
+    "Cpu": {
+      "Type": "String"
+    },
+    "Memory": {
+      "Type": "String",
+      "Default": "0"
+    },
+    "DesiredCapacity": {
+      "Type": "String"
+    },
+    "MaximumPercent": {
+      "Type": "String"
+    },
+    "MinimumHealthyPercent": {
+      "Type": "String"
+    },
+    "semaphoreToken": {
+      "Type": "String",
+      "Description": "Semaphore Agent Token to authenticate with Semaphore API"
+    },
+    "semaphoreEndpoint": {
+      "Type": "String",
+      "Description": "Semaphore API Endpoint to connect to"   
+    },
+    "semaphoreEcsServiceName": {
+      "Type": "String",
+      "Description": "Name of the Semaphore ECS Service"
+    },
+    "semaphoreOverprovisionStrategy": {
+      "Type": "String",
+      "Description": "Overprovision strategy for Semaphore Agent Scaler",
+    },
+    "semaphoreOverprovisionFactor": {
+      "Type": "String",
+      "Description": "Overprovision factor for Semaphore Agent Scaler"
+    }
+  },
+  "Resources": {
+    "SemaphoreScalerAgentEcsTaskDefinitionIamRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ecs-tasks.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/",
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "EcsTaskDefinitionIamRole"
+            ]
+          ]
+        }
+      }
+    },
+    "SemaphoreScalerAgentEcsTaskDefinitionIamPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "SemaphoreScalerAgentEcsTaskDefinitionIamPolicy"
+            ]
+          ]
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Sid": "AllowSecretsRetreiveValue",
+              "Effect": "Allow",
+              "Action": [
+                "secretsmanager:GetSecretValue"
+              ],
+              "Resource": [
+                {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-SharedResources-ArtifactoryDockerUserCredentialsSecretsManagerSecretName"
+                  }
+                },
+                {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-SharedResources-SplunkTokenSecretsManagerSecret"
+                  }
+                }
+              ]
+            },
+            {
+              "Sid": "AllowSemaphoreScalerAgentRetrieveDBUsernameAndPassword",
+              "Action": [
+                "secretsmanager:GetSecretValue"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-Promotions-Rds-PromotionsRDSSecretsManagerSecretArn"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "SemaphoreScalerAgentEcsTaskDefinitionIamRole"
+          }
+        ]
+      }
+    },
+    "SemaphoreScalerAgentEcsTaskDefinitionTaskRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Sid": "RoleMappedToEcsTaskDefinitionTaskRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "SemaphoreScalerAgentTaskDefinitionTaskPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "SemaphoreScalerAgentEcsTaskDefinitionTaskPolicy"
+            ]
+          ]
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Sid": "AllowInteractionWithPollerDirectcallEcsCluster",
+              "Effect": "Allow",
+              "Action": [
+                "ecs:DeregisterContainerInstance",
+                "ecs:DiscoverPollEndpoint",
+                "ecs:Poll",
+                "ecs:RegisterContainerInstance",
+                "ecs:StartTelemetrySession",
+                "ecs:Submit*"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AbilityToCheckoutFromEcr",
+              "Effect": "Allow",
+              "Action": [
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:GetRepositoryPolicy",
+                "ecr:DescribeRepositories",
+                "ecr:ListImages",
+                "ecr:BatchGetImage"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucket",
+                "s3:GetObject",
+                "s3:GetObjectVersion"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "WriteLogsToCloudWatchLogs",
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "AllowSsmAccessToCloudWatchLogGroup",
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${NetworkStack}-SharedResources-SsmLogsLogGroupArn"
+                }
+              }
+            },
+            {
+              "Sid": "AllowSsmAgentToPutLogsToS3",
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:AbortMultipartUpload",
+                "s3:ListMultipartUploadParts",
+                "s3:ListBucket",
+                "s3:ListBucketMultipartUploads"
+              ],
+              "Resource": [
+                {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-SharedResources-SsmS3BucketArn"
+                  }
+                },
+                {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      {
+                        "Fn::ImportValue": {
+                          "Fn::Sub": "${NetworkStack}-SharedResources-SsmS3BucketArn"
+                        }
+                      },
+                      "*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Sid": "AllowGetObjectToPromotionsDataUploadS3Bucket",
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:PutObject",
+                "s3:AbortMultipartUpload",
+                "s3:ListMultipartUploadParts"
+              ],
+              "Resource": [
+                {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-SharedResources-PromotionsDataUploadS3BucketArn"
+                  }
+                },
+                {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      {
+                        "Fn::ImportValue": {
+                          "Fn::Sub": "${NetworkStack}-SharedResources-PromotionsDataUploadS3BucketArn"
+                        }
+                      },
+                      "*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "ssmmessages:CreateControlChannel",
+                "ssmmessages:CreateDataChannel",
+                "ssmmessages:OpenControlChannel",
+                "ssmmessages:OpenDataChannel"
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "AllowRunCommandsToExecuteECSCommandsInFargate"
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "SemaphoreScalerAgentEcsTaskDefinitionTaskRole"
+          }
+        ]
+      }
+    },
+    "SemaphoreScalerAgentEcsTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "ContainerDefinitions": [
+          {
+            "Environment": [
+              {
+                "Name": "SEMAPHORE_AGENT_TOKEN",
+                "Value": {
+                  "Ref": "semaphoreToken"
+                }
+              },
+              {
+                "Name": "SEMAPHORE_AGENT_STACK_NAME",
+                "Value": {
+                  "Ref": "AWS::StackName"
+                }
+              },
+              {
+                "Name": "SEMAPHORE_AGENT_ECS_CLUSTER_NAME",
+                "Value": {
+                  "Fn::ImportValue":{
+                     "Fn::Sub": "${AWS::StackName}-SemaphoreScalerAgentEcsClusterName"
+                  }
+                }
+              },
+              {
+                "Name": "SEMAPHORE_AGENT_ECS_SERVICE_NAME",
+                "Value": {
+                  "Ref": "semaphoreEcsServiceName"
+                }
+              },
+              {
+                "Name": "SEMAPHORE_ENDPOINT",
+                "Value": {
+                  "Ref": "semaphoreEndpoint"
+                }
+              },
+              {
+                "Name":"SEMAPHORE_AGENT_ECS_SERVICE_NAME",
+                "Value":{
+                  "Ref": "semaphoreEcsServiceName"
+                }      
+              },
+              {
+                "Name":"SEMAPHORE_AGENT_OVERPROVISION_STRATEGY",
+                "Value":{
+                  "Ref": "semaphoreOverprovisionStrategy"
+                }
+              },
+              {
+                "Name":"SEMAPHORE_AGENT_OVERPROVISION_FACTOR",
+                "Value":{
+                  "Ref": "semaphoreOverprovisionFactor"
+                }
+              }
+            ],
+            "Essential": true,
+            "Image": "yashprime07/semaphore-agent-scaler:latest",
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": "/ecs/semaphore-agent-scaler",
+                "awslogs-region": "us-east-1",
+                "awslogs-stream-prefix": "ecs"
+              }
+            },
+            "MemoryReservation": 128,
+            "Name": {
+              "Ref": "AWS::StackName"
+            },
+            "Privileged": false,
+            "ReadonlyRootFilesystem": false,
+            "User": "nextjs",
+            "Ulimits": [
+              {
+                "HardLimit": 900000,
+                "Name": "nofile",
+                "SoftLimit": 900000
+              }
+            ]
+          }
+        ],
+        "Cpu": {
+          "Ref": "Cpu"
+        },
+        "Memory": {
+          "Ref": "Memory"
+        },
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "SemaphoreScalerAgentEcsTaskDefinitionIamRole",
+            "Arn"
+          ]
+        },
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "SemaphoreScalerAgentEcsTaskDefinitionTaskRole",
+            "Arn"
+          ]
+        },
+        "Family": {
+          "Ref": "AWS::StackName"
+        },
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ]
+      }
+    },
+    "SemaphoreScalerAgentEcsService": {
+      "Properties": {
+        "Cluster": {
+          "Fn::ImportValue":{
+              "Fn::Sub": "${AWS::StackName}-SemaphoreScalerAgentEcsClusterName"
+          }
+        },
+        "DeploymentConfiguration": {
+          "MaximumPercent": {
+            "Ref": "MaximumPercent"
+          },
+          "MinimumHealthyPercent": {
+            "Ref": "MinimumHealthyPercent"
+          },
+          "DeploymentCircuitBreaker": {
+            "Enable":   true,
+            "Rollback": true
+          }
+        },
+        "DesiredCount": {
+          "Ref": "DesiredCapacity"
+        },
+        "LaunchType": "FARGATE",
+        "EnableExecuteCommand": true,
+        "PropagateTags": "SERVICE",
+        "Tags": [
+          {
+            "Key": "ct-aws:cloudformation:stack-name",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          }
+        ],
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "DISABLED",
+            "SecurityGroups": [
+              {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${NetworkStack}-SecurityGroup-PromotionsSemaphoreScalerAgentEc2SecurityGroupId"
+                }
+              }
+            ],
+            "Subnets": [
+                  {
+                    "Fn::ImportValue": {
+                      "Fn::Sub": "${AWS::StackName}-PrivateAzAEc2SubnetId"
+                    }
+                  },
+                  {
+                    "Fn::ImportValue": {
+                      "Fn::Sub": "${AWS::StackName}-PrivateAzBEc2SubnetId"
+                    }
+                  }
+            ]
+          }
+        },
+        "ServiceName": {
+          "Ref": "AWS::StackName"
+        },
+        "TaskDefinition": {
+          "Ref": "SemaphoreScalerAgentEcsTaskDefinition"
+        }
+      },
+      "Type": "AWS::ECS::Service"
+    }
+  }
+}
