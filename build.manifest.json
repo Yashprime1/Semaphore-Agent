@@ -115,7 +115,7 @@
           },
           "StackPolicy": {}
         },
-         {
+        {
           "StackName": "Semaphore-Agent-s1-e2e-c5-12xlarge",
           "Action": "CREATE",
           "TemplatePath": "templates/semaphore/agent-scaler.json",
@@ -141,6 +141,24 @@
             "EnableStandaloneSemaphoreAgent": "false",
             "BuildAccountProductionAccessIAMRoleArn": "arn:aws:iam::062484260092:role/System-Iam-BuildAccountProductionAccessIAMRole",
             "BuildAccountDataScienceAccessIAMRoleArn": "arn:aws:iam::796973483800:role/System-Datascience-Iam-BuildAccountProductionAccessIAMRole"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-Agent-Scaler",
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/ecs-agent-scaler.json",
+          "DependsOn": [
+            "cfstack-Init",
+            "System-Network",
+            "System-SecurityGroup",
+            "System-SharedResources",
+            "CloudWatchLogRetention-CustomResource",
+            "Semaphore-GitHubSshKeyFingerprint",
+            "Semaphore-AzReBalanceSuspender"
+          ],
+          "Parameters": {
+            "NetworkStack": "System-Network"
           },
           "StackPolicy": {}
         }
