@@ -445,19 +445,14 @@
             "SecurityGroups": [
               {
                 "Fn::ImportValue": {
-                  "Fn::Sub": "${NetworkStack}-SecurityGroup-PromotionsSemaphoreScalerAgentEc2SecurityGroupId"
+                  "Fn::Sub": "${NetworkStack}-SecurityGroup-SemaphoreAgentEc2SecurityGroupId"
                 }
               }
             ],
             "Subnets": [
                   {
                     "Fn::ImportValue": {
-                      "Fn::Sub": "${AWS::StackName}-PrivateAzAEc2SubnetId"
-                    }
-                  },
-                  {
-                    "Fn::ImportValue": {
-                      "Fn::Sub": "${AWS::StackName}-PrivateAzBEc2SubnetId"
+                      "Fn::Sub": "${NetworkStack}-SemaphoreAgentEc2SubnetId"
                     }
                   }
             ]
@@ -609,19 +604,14 @@
             "SecurityGroups": [
               {
                 "Fn::ImportValue": {
-                  "Fn::Sub": "${NetworkStack}-SecurityGroup-PromotionsSemaphoreScalerAgentEc2SecurityGroupId"
+                  "Fn::Sub": "${NetworkStack}-SecurityGroup-SemaphoreAgentEc2SecurityGroupId"
                 }
               }
             ],
             "Subnets": [
                   {
                     "Fn::ImportValue": {
-                      "Fn::Sub": "${AWS::StackName}-PrivateAzAEc2SubnetId"
-                    }
-                  },
-                  {
-                    "Fn::ImportValue": {
-                      "Fn::Sub": "${AWS::StackName}-PrivateAzBEc2SubnetId"
+                      "Fn::Sub": "${NetworkStack}-SemaphoreAgentEc2SubnetId"
                     }
                   }
             ]
