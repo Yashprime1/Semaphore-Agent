@@ -162,11 +162,7 @@ const scaleServiceIfNeeded = async (ecsClient, clusterName, serviceName, occupan
   if (newSize > service.desiredCount) {
     await updateEcsServiceDesiredCount(ecsClient, clusterName, serviceName, newSize);
     console.log(`Successfully scaled up ECS service '${serviceName}' to ${newSize}.`);
-  }  else if (newSize < service.desiredCount) {
-    await updateEcsServiceDesiredCount(ecsClient, clusterName, serviceName, newSize);
-    console.log(`Successfully scaled down ECS service '${serviceName}' from ${service.desiredCount} to ${newSize}.`);
-  }  
-  else {
+  } else {
     console.log(`No need to scale up ECS service '${serviceName}'. Current: ${service.desiredCount}, Calculated: ${newSize}`);
   }
 }

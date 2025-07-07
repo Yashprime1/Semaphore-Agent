@@ -180,7 +180,7 @@
             "Command": [
               "sh",
               "-c",
-              "mkdir -p /opt/semaphore && cat > /opt/semaphore/semaphore-agent.yml << EOF\nendpoint: ${SEMAPHORE_ENDPOINT}\ntoken: ${SEMAPHORE_AGENT_TOKEN}\ndisconnect-after-job: false\ndisconnect-after-idle-timeout: 300\nEOF\n/opt/semaphore/agent start --config-file /opt/semaphore/semaphore-agent.yml"
+              "mkdir -p /opt/semaphore && cat > /opt/semaphore/semaphore-agent.yml << EOF\nendpoint: ${SEMAPHORE_ENDPOINT}\ntoken: ${SEMAPHORE_AGENT_TOKEN}\ndisconnect-after-job: true\ndisconnect-after-idle-timeout: 30\nEOF\n/opt/semaphore/agent start --config-file /opt/semaphore/semaphore-agent.yml"
             ],
             "Essential": true,
             "Image": {
