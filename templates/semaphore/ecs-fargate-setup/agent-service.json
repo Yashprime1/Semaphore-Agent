@@ -172,40 +172,6 @@
                 }
               }
             ],
-            "Secrets": [
-              {
-                "Name": "DB_USER",
-                "ValueFrom": {
-                  "Fn::Join": [
-                    "",
-                    [
-                      {
-                        "Fn::ImportValue": {
-                          "Fn::Sub": "${NetworkStack}-Promotions-Rds-PromotionsRDSSecretsManagerSecretArn"
-                        }
-                      },
-                      ":username::"
-                    ]
-                  ]
-                }
-              },
-              {
-                "Name": "DB_PASSWORD",
-                "ValueFrom": {
-                  "Fn::Join": [
-                    "",
-                    [
-                      {
-                        "Fn::ImportValue": {
-                          "Fn::Sub": "${NetworkStack}-Promotions-Rds-PromotionsRDSSecretsManagerSecretArn"
-                        }
-                      },
-                      ":password::"
-                    ]
-                  ]
-                }
-              }
-            ],
             "Essential": true,
             "Image": {
               "Fn::Sub":"semaphoreci/agent:${ContainerTag}"
