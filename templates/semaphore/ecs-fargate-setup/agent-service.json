@@ -316,7 +316,7 @@
             "SecurityGroups": [
               {
                 "Fn::ImportValue": {
-                  "Fn::Sub": "${NetworkStack}System-SecurityGroup-SemaphoreAgentEc2SecurityGroupId"
+                  "Fn::Sub": "System-SecurityGroup-SemaphoreAgentEc2SecurityGroupId"
                 }
               }
             ],
