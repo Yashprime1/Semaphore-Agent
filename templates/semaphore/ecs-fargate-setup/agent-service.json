@@ -186,7 +186,7 @@
             "Command": [
               "sh",
               "-c",
-              "mkdir -p /opt/semaphore && touch /opt/semaphore/semaphore-agent.yml && agent start"
+              "mkdir -p /opt/semaphore && touch /opt/semaphore/semaphore-agent.yml && /opt/semaphore/agent start"
             ],
             "Essential": true,
             "Image": {
