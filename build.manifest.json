@@ -153,7 +153,7 @@
           "StackPolicy": {}
         },
         {
-          "StackName": "Semaphore-Ecs-Agent-.25Vcpu-.5GBmem-Service",
+          "StackName": "Semaphore-Ecs-Agent-Point25Vcpu-Point5GBmem-Service",
           "DependsOn": [
             "Semaphore-Ecs-Agent"
           ],
