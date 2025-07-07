@@ -174,7 +174,18 @@
                 "Value": {
                   "Fn::Sub": "{{resolve:ssm:${SemaphoreAgentRegistrationTokenSsmParameter}:1}}"
                 }
+              },
+              {
+                "Name": "SEMAPHORE_ENDPOINT",
+                "Value": {
+                  "Ref": "SemaphoreEndpoint"
+                }
               }
+            ],
+            "Command": [
+              "agent",
+              "start",
+              "--config-file", ""
             ],
             "Essential": true,
             "Image": {
