@@ -33,6 +33,15 @@
     }
   },
   "Resources": {
+    "LogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/ecs/${AWS::StackName}"
+        },
+        "RetentionInDays": 7
+      }
+    },
     "SemaphoreAgentEcsTaskDefinitionIamRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -202,38 +211,16 @@
               "Fn::Sub":"semaphoreci/agent:${ContainerTag}"
             },
             "LogConfiguration": {
-              "LogDriver": "splunk",
+              "LogDriver": "awslogs",
               "Options": {
-                "splunk-format": "raw",
-                "splunk-verify-connection": "false",
-                "splunk-index": "promotions-stdout",
-                "splunk-source": {
-                  "Ref": "AWS::StackName"
+                "awslogs-group": {
+                  "Ref": "LogGroup"
                 },
-                "splunk-sourcetype": "stdout",
-                "labels": "stack",
-                "splunk-url": {
-                  "Fn::Sub": "https://${NetworkStack}.splunk-hec.clevertap-internal.io"
-                }
-              },
-              "SecretOptions": [
-                {
-                  "Name": "splunk-token",
-                  "ValueFrom": {
-                    "Fn::Join": [
-                      ":",
-                      [
-                        {
-                          "Fn::ImportValue": {
-                            "Fn::Sub": "${NetworkStack}-SharedResources-SplunkTokenSecretsManagerSecret"
-                          }
-                        },
-                        "splunk-token::"
-                      ]
-                    ]
-                  }
-                }
-              ]
+                "awslogs-region": {
+                  "Ref": "AWS::Region"
+                },
+                "awslogs-stream-prefix": "ecs"
+              }
             },
             "MemoryReservation": 128,
             "Name": {
