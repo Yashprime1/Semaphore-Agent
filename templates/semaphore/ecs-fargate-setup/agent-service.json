@@ -1,0 +1,519 @@
+{
+  "Parameters": {
+    "NetworkStack": {
+      "Description": "Name of the stack that this stack references for networking and shared resources",
+      "Type": "String"
+    },
+    "ContainerTag": {
+      "Type": "String"
+    },
+    "Cpu": {
+      "Type": "String"
+    },
+    "DesiredCapacity": {
+      "Type": "String"
+    },
+    "MaximumPercent": {
+      "Type": "String"
+    },
+    "MinimumHealthyPercent": {
+      "Type": "String"
+    },
+    "MinTasks": {
+      "Type": "String",
+      "Default": "0"
+    },
+    "MaxTasks": {
+      "Type": "String",
+      "Default": "10"
+    },
+    "Memory": {
+      "Type": "String",
+      "Default": "0"
+    }
+  },
+  "Resources": {
+    "SemaphoreAgentEcsTaskDefinitionIamRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ecs-tasks.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/",
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "EcsTaskDefinitionIamRole"
+            ]
+          ]
+        }
+      }
+    },
+    "SemaphoreAgentEcsTaskDefinitionIamPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "SemaphoreAgentEcsTaskDefinitionIamPolicy"
+            ]
+          ]
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Sid": "AllowSecretsRetreiveValue",
+              "Effect": "Allow",
+              "Action": ["*"],
+              "Resource": ["*"]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "SemaphoreAgentEcsTaskDefinitionIamRole"
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentEcsTaskDefinitionTaskRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Sid": "RoleMappedToEcsTaskDefinitionTaskRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "SemaphoreAgentTaskDefinitionTaskPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::StackName"
+              },
+              "SemaphoreAgentEcsTaskDefinitionTaskPolicy"
+            ]
+          ]
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": ["*"],
+              "Effect": "Allow",
+              "Resource": ["*"],
+              "Sid": "AllowRunCommandsToExecuteECSCommandsInFargate"
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "SemaphoreAgentEcsTaskDefinitionTaskRole"
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentEcsTaskDefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "ContainerDefinitions": [
+          {
+            "DockerLabels": {
+              "stack": {
+                "Ref": "AWS::StackName"
+              }
+            },
+            "Environment": [
+              {
+                "Name": "STACK_PREFIX",
+                "Value": {
+                  "Ref": "NetworkStack"
+                }
+              },
+              {
+                "Name": "STACK_NAME",
+                "Value": {
+                  "Ref": "AWS::StackName"
+                }
+              },
+              {
+                "Name": "REGION_NAME",
+                "Value": {
+                  "Ref": "AWS::Region"
+                }
+              },
+              {
+                "Name": "DB_HOST",
+                "Value": {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-Promotions-Rds-PromotionsRDSDBClusterEndpoint"
+                  }
+                }
+              },
+              {
+                "Name": "DB_WRITER_HOST",
+                "Value": {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-Promotions-Rds-PromotionsRDSDBClusterEndpoint"
+                  }
+                }
+              },
+              {
+                "Name": "DB_READER_HOST",
+                "Value": {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-Promotions-Rds-PromotionsRDSDBClusterReaderEndpoint"
+                  }
+                }
+              },
+              {
+                "Name": "DB_PORT",
+                "Value": "5432"
+              },
+              {
+                "Name": "DB_NAME",
+                "Value": "promotions"
+              },
+              {
+                "Name": "REDIS_HOST",
+                "Value": {
+                  "Fn::Join": [
+                    ".",
+                    [
+                      {
+                        "Ref": "NetworkStack"
+                      },
+                      "promotions-redis",
+                      "clevertap-internal",
+                      "io"
+                    ]
+                  ]
+                }
+              },
+              {
+                "Name": "REDIS_PORT",
+                "Value": "6379"
+              },
+              {
+                "Name": "AWS_REGION",
+                "Value": {
+                  "Ref": "AWS::Region"
+                }
+              },
+              {
+                "Name": "SQS_QUEUE_NAME",
+                "Value": {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-SharedResources-PromotionsDistributionStandardSqsQueueName"
+                  }
+                }
+              },
+              {
+                "Name": "PROMO_S3_BUCKET",
+                "Value": {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-SharedResources-PromotionsDataUploadS3BucketName"
+                  }
+                }
+              },
+              {
+                "Name": "CT_SYSTEM_BASE_URL",
+                "Value": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Ref": "NetworkStack"
+                      },
+                      "-promotions-private.api.clevertap-internal.io"
+                    ]
+                  ]
+                }
+              }
+            ],
+            "Secrets": [
+              {
+                "Name": "DB_USER",
+                "ValueFrom": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::ImportValue": {
+                          "Fn::Sub": "${NetworkStack}-Promotions-Rds-PromotionsRDSSecretsManagerSecretArn"
+                        }
+                      },
+                      ":username::"
+                    ]
+                  ]
+                }
+              },
+              {
+                "Name": "DB_PASSWORD",
+                "ValueFrom": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::ImportValue": {
+                          "Fn::Sub": "${NetworkStack}-Promotions-Rds-PromotionsRDSSecretsManagerSecretArn"
+                        }
+                      },
+                      ":password::"
+                    ]
+                  ]
+                }
+              }
+            ],
+            "Essential": true,
+            "Image": {
+              "Fn::Sub":"semaphoreci/agent:${ContainerTag}"
+            },
+            "LogConfiguration": {
+              "LogDriver": "splunk",
+              "Options": {
+                "splunk-format": "raw",
+                "splunk-verify-connection": "false",
+                "splunk-index": "promotions-stdout",
+                "splunk-source": {
+                  "Ref": "AWS::StackName"
+                },
+                "splunk-sourcetype": "stdout",
+                "labels": "stack",
+                "splunk-url": {
+                  "Fn::Sub": "https://${NetworkStack}.splunk-hec.clevertap-internal.io"
+                }
+              },
+              "SecretOptions": [
+                {
+                  "Name": "splunk-token",
+                  "ValueFrom": {
+                    "Fn::Join": [
+                      ":",
+                      [
+                        {
+                          "Fn::ImportValue": {
+                            "Fn::Sub": "${NetworkStack}-SharedResources-SplunkTokenSecretsManagerSecret"
+                          }
+                        },
+                        "splunk-token::"
+                      ]
+                    ]
+                  }
+                }
+              ]
+            },
+            "MemoryReservation": 128,
+            "Name": {
+              "Ref": "AWS::StackName"
+            },
+            "Privileged": false,
+            "PortMappings": [
+              {
+                "ContainerPort": 8080,
+                "HostPort": 8080,
+                "Protocol": "tcp"
+              }
+            ],
+            "ReadonlyRootFilesystem": false,
+            "Ulimits": [
+              {
+                "HardLimit": 900000,
+                "Name": "nofile",
+                "SoftLimit": 900000
+              }
+            ]
+          }
+        ],
+        "Cpu": {
+          "Ref": "Cpu"
+        },
+        "Memory": {
+          "Ref": "Memory"
+        },
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "SemaphoreAgentEcsTaskDefinitionIamRole",
+            "Arn"
+          ]
+        },
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "SemaphoreAgentEcsTaskDefinitionTaskRole",
+            "Arn"
+          ]
+        },
+        "Family": {
+          "Ref": "AWS::StackName"
+        },
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ]
+      }
+    },
+    "SemaphoreAgentEcsService": {
+      "Properties": {
+        "Cluster": {
+          "Fn::ImportValue": {
+            "Fn::Join": [
+              "-",
+              [
+                "Semaphore-Ecs-Agent",
+                "SemaphoreAgentEcsClusterName"
+              ]
+            ]
+          }
+        },
+        "DeploymentConfiguration": {
+          "MaximumPercent": {
+            "Ref": "MaximumPercent"
+          },
+          "MinimumHealthyPercent": {
+            "Ref": "MinimumHealthyPercent"
+          },
+          "DeploymentCircuitBreaker": {
+            "Enable":   true,
+            "Rollback": true
+          }
+        },
+        "DesiredCount": {
+          "Ref": "DesiredCapacity"
+        },
+        "LaunchType": "FARGATE",
+        "EnableExecuteCommand": true,
+        "PropagateTags": "SERVICE",
+        "Tags": [
+          {
+            "Key": "ct-aws:cloudformation:stack-name",
+            "Value": {
+              "Ref": "AWS::StackName"
+            }
+          }
+        ],
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "AssignPublicIp": "DISABLED",
+            "SecurityGroups": [
+              {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${NetworkStack}System-SecurityGroup-SemaphoreAgentEc2SecurityGroupId"
+                }
+              }
+            ],
+            "Subnets": [
+                  {
+                    "Fn::ImportValue": {
+                      "Fn::Sub": "${NetworkStack}-SemaphoreAgentEc2SubnetId"
+                    }
+                  }
+                ]
+          }
+        },
+        "ServiceName": {
+          "Ref": "AWS::StackName"
+        },
+        "TaskDefinition": {
+          "Ref": "SemaphoreAgentEcsTaskDefinition"
+        }
+      },
+      "Type": "AWS::ECS::Service"
+    },
+    "SemaphoreAgentAutoScalingIamRole": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Sid": "RoleMappedforContainerAutoscalingTarget"
+            }
+          ]
+        },
+        "Path": "/"
+      },
+      "Type": "AWS::IAM::Role"
+    },
+    "SemaphoreAgentApplicationAutoScalingScalableTarget": {
+      "Properties": {
+        "MaxCapacity": {
+          "Ref": "MaxTasks"
+        },
+        "MinCapacity": {
+          "Ref": "MinTasks"
+        },
+        "ResourceId": {
+          "Fn::Join": [
+            "/",
+            [
+              "service",
+              {
+                "Fn::ImportValue": {
+                  "Fn::Join": [
+                    "-",
+                    [
+                      {
+                        "Ref": "AWS::StackName"
+                      },
+                      "SemaphoreAgentEcsClusterName"
+                    ]
+                  ]
+                }
+              },
+              {
+                "Fn::GetAtt": [
+                  "SemaphoreAgentEcsService",
+                  "Name"
+                ]
+              }
+            ]
+          ]
+        },
+        "RoleARN": {
+          "Fn::GetAtt": [
+            "SemaphoreAgentAutoScalingIamRole",
+            "Arn"
+          ]
+        },
+        "ScalableDimension": "ecs:service:DesiredCount",
+        "ServiceNamespace": "ecs"
+      },
+      "Type": "AWS::ApplicationAutoScaling::ScalableTarget"
+    }
+  }
+}

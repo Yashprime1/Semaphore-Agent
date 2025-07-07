@@ -1,0 +1,20 @@
+{
+  "Resources": {
+    "SemaphoreAgentEcsCluster": {
+      "Type": "AWS::ECS::Cluster",
+      "Properties": {}
+    }
+  },
+  "Outputs": {
+    "SemaphoreAgentEcsClusterName": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-Service-SemaphoreAgentEcsClusterName"
+        }
+      },
+      "Value": {
+        "Ref": "SemaphoreAgentEcsCluster"
+      }
+    }
+  }
+}
