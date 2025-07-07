@@ -4,6 +4,15 @@
       "Description": "Name of the stack that this stack references for networking and shared resources",
       "Type": "String"
     },
+    "SemaphoreEndpoint": {
+      "Type": "String",
+      "Default": "clevertap.semaphoreci.com",
+      "Description": "Semaphore organization endpoint"
+    },
+    "SemaphoreAgentScalerLambdaCodeS3Key": {
+      "Type": "String",
+      "Description": "Semaphore agent scaler lambda code s3 key"
+    },
     "ContainerTag": {
       "Type": "String"
     },
@@ -354,6 +363,267 @@
         "ServiceNamespace": "ecs"
       },
       "Type": "AWS::ApplicationAutoScaling::ScalableTarget"
+    },
+    "SemaphoreAgentConfigSsmParameter": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Description": "Semaphore agent config",
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-Config"
+        },
+        "Tier": "Standard",
+        "Type": "String",
+        "Value": {
+          "Fn::Join": [
+            "",
+            [
+              "{",
+              "\"endpoint\":\"",
+              {
+                "Ref": "SemaphoreEndpoint"
+              },
+              "\",",
+              "\"agentTokenParameterName\":\"",
+              {
+                "Ref": "SemaphoreAgentRegistrationTokenSsmParameter"
+              },
+              "\",",
+              "\"sshKeysParameterName\":\"",
+              {
+                "Fn::ImportValue": "Semaphore-GitHubSshKeyFingerprint-GithubPublicSshKeyFingerprintSSMParameterName"
+              },
+              "\",",
+              "\"disconnectAfterJob\":\"true\",",
+              "\"disconnectAfterIdleTimeout\":\"300\",",
+              "\"envVars\":[",
+              "\"SEMAPHORE_GIT_CACHE_AGE=86400\",",
+              "\"SEMAPHORE_CACHE_BACKEND=s3\",",
+              "\"SEMAPHORE_CACHE_S3_BUCKET=",
+              {
+                "Fn::ImportValue": "System-SharedResources-SemaphoreCachingS3BucketName"
+              },
+              "\",",
+              "\"SEMAPHORE_CACHE_USE_EC2_INSTANCE_PROFILE=true\"",
+              "],",
+              "\"usePreSignedURL\":false",
+              "}"
+            ]
+          ]
+        }
+      }
+    },
+    "SemaphoreAgentScalerLambdaIamRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+              ]
+            ]
+          },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentScalerLambdaIamPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+          
+          ],
+          "Version": "2012-10-17"
+        },
+        "PolicyName": {
+          "Fn::Sub": "${AWS::StackName}-SemaphoreAgentScalerLambdaIamPolicy"
+        },
+        "Roles": [
+          {
+            "Ref": "SemaphoreAgentScalerLambdaIamRole"
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentScalerLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::ImportValue": "cfstack-Init-SourceS3BucketName"
+          },
+          "S3Key": {
+            "Ref": "SemaphoreAgentScalerLambdaCodeS3Key"
+          }
+        },
+        "Description": "Dynamically scale Semaphore agents based on jobs demand",
+        "Environment": {
+          "Variables": {
+            "SEMAPHORE_AGENT_TOKEN_PARAMETER_NAME": {
+              "Ref": "SemaphoreAgentRegistrationTokenSsmParameter"
+            },
+            "SEMAPHORE_AGENT_STACK_NAME": {
+              "Ref": "AWS::StackName"
+            },
+            "SEMAPHORE_ENDPOINT": {
+              "Ref": "SemaphoreEndpoint"
+            },
+            "ECS_CLUSTER_NAME":{
+              "Fn::ImportValue": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "Semaphore-Ecs-Agent",
+                    "SemaphoreAgentEcsClusterName"
+                  ]
+                ]
+              }
+            },
+            "ECS_SERVICE_NAME": {
+              "Fn::GetAtt": [
+                "SemaphoreAgentEcsService",
+                "Name"
+              ]
+            },
+            "SEMAPHORE_AGENT_OVERPROVISION_STRATEGY": "none",
+            "SEMAPHORE_AGENT_OVERPROVISION_FACTOR": "0"
+          }
+        },
+        "Handler": "app.handler",
+        "ReservedConcurrentExecutions": 1,
+        "Role": {
+          "Fn::GetAtt": [
+            "SemaphoreAgentScalerLambdaIamRole",
+            "Arn"
+          ]
+        },
+        "Runtime": "nodejs18.x",
+        "Timeout": 60,
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::ImportValue": "System-SecurityGroup-SemaphoreAgentScalerLambdaEc2SecurityGroupId"
+            }
+          ],
+          "SubnetIds": [
+            {
+              "Fn::ImportValue": {
+                "Fn::Sub": "${NetworkStack}-SemaphoreAgentEc2SubnetId"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "SemaphoreAgentScalerLambdaFunctionLogRetention": {
+      "Type": "Custom::LogRetention",
+      "Properties": {
+        "ServiceToken": {
+          "Fn::ImportValue": "CloudWatchLogRetention-CustomResource-LogRetentionLambdaFunctionArn"
+        },
+        "LogGroupName": {
+          "Fn::Join": [
+            "",
+            [
+              "/aws/lambda/",
+              {
+                "Ref": "SemaphoreAgentScalerLambdaFunction"
+              }
+            ]
+          ]
+        },
+        "RetentionInDays": 30
+      }
+    },
+    "SemaphoreAgentScalerLambdaEventInvokeConfig": {
+      "Type": "AWS::Lambda::EventInvokeConfig",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "SemaphoreAgentScalerLambdaFunction"
+        },
+        "MaximumEventAgeInSeconds": 60,
+        "MaximumRetryAttempts": 0,
+        "Qualifier": "$LATEST"
+      }
+    },
+    "SemaphoreAgentScalerEventsRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Description": "Rule to dynamically invoke lambda function to scale Semaphore agent asg",
+        "ScheduleExpression": "rate(1 minute)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "SemaphoreAgentScalerLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "Target0"
+          }
+        ]
+      }
+    },
+    "SemaphoreAgentScalerEventsRuleLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "SemaphoreAgentScalerLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "SemaphoreAgentScalerEventsRule",
+            "Arn"
+          ]
+        }
+      }
+    },
+    "SemaphoreAgentRegistrationTokenSsmParameter": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Description": "Semaphore agent registration token",
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-Agent-Registration-Token"
+        },
+        "Tier": "Standard",
+        "Type": "String",
+        "Value": "replace_me"
+      }
     }
   }
 }

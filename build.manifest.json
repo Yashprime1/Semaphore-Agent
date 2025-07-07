@@ -168,7 +168,8 @@
             "MaxTasks": "30",
             "MaximumPercent": "200",
             "MinimumHealthyPercent": "100",
-            "DesiredCapacity": "0"
+            "DesiredCapacity": "0",
+            "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/ecs_scaler.zip"
           },
           "StackPolicy": {}
         }
