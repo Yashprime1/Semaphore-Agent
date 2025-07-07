@@ -60,18 +60,7 @@
             }
           ]
         },
-        "Path": "/",
-        "RoleName": {
-          "Fn::Join": [
-            "-",
-            [
-              {
-                "Ref": "AWS::StackName"
-              },
-              "EcsTaskDefinitionIamRole"
-            ]
-          ]
-        }
+        "Path": "/"
       }
     },
     "SemaphoreAgentEcsTaskDefinitionIamPolicy": {
