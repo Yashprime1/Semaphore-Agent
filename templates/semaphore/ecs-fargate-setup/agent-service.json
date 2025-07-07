@@ -168,6 +168,12 @@
                 "Value": {
                   "Ref": "NetworkStack"
                 }
+              },
+              {
+                "Name":"SEMAPHORE_AGENT_TOKEN",
+                "Value": {
+                  "Fn::Sub": "{{resolve:ssm:${SemaphoreAgentRegistrationTokenSsmParameter}:1}}"
+                }
               }
             ],
             "Essential": true,
