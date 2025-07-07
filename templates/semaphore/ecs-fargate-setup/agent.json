@@ -9,7 +9,7 @@
     "SemaphoreAgentEcsClusterName": {
       "Export": {
         "Name": {
-          "Fn::Sub": "${AWS::StackName}-Service-SemaphoreAgentEcsClusterName"
+          "Fn::Sub": "${AWS::StackName}-SemaphoreAgentEcsClusterName"
         }
       },
       "Value": {
