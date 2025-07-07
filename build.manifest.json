@@ -145,36 +145,30 @@
           "StackPolicy": {}
         },
         {
-          "StackName": "Semaphore-Agent-Scaler",
+          "StackName": "Semaphore-Ecs-Agent",
           "Action": "CREATE",
-          "TemplatePath": "templates/semaphore/ecs-agent-scaler.json",
-          "DependsOn": [
-            "cfstack-Init"
-          ],
+          "TemplatePath": "templates/semaphore/ecs-fargate-setup/agent.json",
           "Parameters": {
           },
           "StackPolicy": {}
         },
         {
-          "StackName": "Semaphore-Agent-Scaler-Service",
-          "Action": "CREATE",
-          "TemplatePath":  "templates/semaphore/ecs-agent-scaler-service.json",
+          "StackName": "Semaphore-Ecs-Agent-.25Vcpu-.5GBmem-Service",
           "DependsOn": [
-            "cfstack-Init",
-            "System-Network",
-            "System-SecurityGroup"
+            "Semaphore-Ecs-Agent"
           ],
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/ecs-fargate-setup/agent-service.json",
           "Parameters": {
             "NetworkStack": "System-Network",
-            "Cpu":"256",
-            "Memory":"512",
-            "DesiredCapacity": "1",
+            "ContainerTag": "v2.3.0",
+            "Memory": "512",
+            "Cpu": "256",
+            "MinTasks": "0",
+            "MaxTasks": "30",
             "MaximumPercent": "200",
             "MinimumHealthyPercent": "100",
-            "SemaphoreToken":"abc",
-            "SemaphoreEndpoint": "clevertap.semaphoreci.com",
-            "SemaphoreOverprovisionStrategy": "none",
-            "SemaphoreOverprovisionFactor": "0"
+            "DesiredCapacity": "0"
           },
           "StackPolicy": {}
         }
