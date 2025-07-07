@@ -1,0 +1,19 @@
+{
+  "name": "semaphore-agent-ecs-scaling-lambda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-application-auto-scaling": "^3.840.0",
+    "@aws-sdk/client-cloudwatch": "^3.841.0",
+    "@aws-sdk/client-ecs": "^3.840.0",
+    "@aws-sdk/client-ssm": "^3.840.0",
+    "@aws-sdk/node-http-handler": "^3.374.0"
+  }
+}
