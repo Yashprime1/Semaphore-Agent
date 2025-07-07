@@ -151,7 +151,7 @@ function determineNewSize(totalJobs, min, max, overprovisionStrategy, overprovis
   return newSize;
 }
 
-const scaleUpIfNeeded = async (ecsClient, clusterName, serviceName, occupancy, scalingConfig, service, overprovisionStrategy, overprovisionFactor) => {
+const scaleServiceIfNeeded = async (ecsClient, clusterName, serviceName, occupancy, scalingConfig, service, overprovisionStrategy, overprovisionFactor) => {
   const totalJobs = Object.keys(occupancy).reduce((count, state) => count + occupancy[state], 0);
 
   console.log(`Agent type occupancy: `, occupancy);
@@ -162,7 +162,11 @@ const scaleUpIfNeeded = async (ecsClient, clusterName, serviceName, occupancy, s
   if (newSize > service.desiredCount) {
     await updateEcsServiceDesiredCount(ecsClient, clusterName, serviceName, newSize);
     console.log(`Successfully scaled up ECS service '${serviceName}' to ${newSize}.`);
-  } else {
+  }  else if (newSize < service.desiredCount) {
+    await updateEcsServiceDesiredCount(ecsClient, clusterName, serviceName, newSize);
+    console.log(`Successfully scaled down ECS service '${serviceName}' from ${service.desiredCount} to ${newSize}.`);
+  }  
+  else {
     console.log(`No need to scale up ECS service '${serviceName}'. Current: ${service.desiredCount}, Calculated: ${newSize}`);
   }
 }
@@ -280,7 +284,7 @@ const tick = async (agentTypeToken, stackName, clusterName, serviceName, ecsClie
     // Get Application Auto Scaling configuration
     const scalingConfig = await describeEcsApplicationAutoscaling(appAutoScalingClient, clusterName, serviceName);
     
-    await scaleUpIfNeeded(ecsClient, clusterName, serviceName, metrics.jobs, scalingConfig, service, overprovisionStrategy, overprovisionFactor);
+    await scaleServiceIfNeeded(ecsClient, clusterName, serviceName, metrics.jobs, scalingConfig, service, overprovisionStrategy, overprovisionFactor);
   } catch (e) {
     console.error("Error in tick execution", e);
   }
