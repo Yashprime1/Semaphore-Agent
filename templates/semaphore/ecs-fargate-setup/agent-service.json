@@ -340,9 +340,7 @@
                   "Fn::Join": [
                     "-",
                     [
-                      {
-                        "Ref": "AWS::StackName"
-                      },
+                      "Semaphore-Ecs-Agent",
                       "SemaphoreAgentEcsClusterName"
                     ]
                   ]
