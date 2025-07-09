@@ -184,6 +184,12 @@
                 "Value": "30"
               },
               {
+                "Name":"SSH_KEYS_PARAMETER_NAME",
+                "Value":  {
+                  "Fn::ImportValue": "Semaphore-GitHubSshKeyFingerprint-GithubPublicSshKeyFingerprintSSMParameterName"
+                }
+              },
+              {
                 "Name":"AWS_REGION",
                 "Value": {
                   "Ref": "AWS::Region"  

@@ -6,6 +6,7 @@ SEMAPHORE_AGENT_TOKEN=${SEMAPHORE_AGENT_TOKEN:-""}
 DISCONNECT_AFTER_JOB=${DISCONNECT_AFTER_JOB:-"true"}
 DISCONNECT_AFTER_IDLE_TIMEOUT=${DISCONNECT_AFTER_IDLE_TIMEOUT:-"30"}
 SHUTDOWN_HOOK_PATH=${SHUTDOWN_HOOK_PATH:-"/opt/semaphore/shutdown"}
+SSH_KEYS_PARAMETER_NAME=${SSH_KEYS_PARAMETER_NAME:-""}
 
 # Ensure the directory exists
 mkdir -p /opt/semaphore
@@ -14,6 +15,7 @@ mkdir -p /opt/semaphore
 cat > /opt/semaphore/semaphore-agent.yml << EOF
 endpoint: ${SEMAPHORE_ENDPOINT}
 token: ${SEMAPHORE_AGENT_TOKEN}
+sshKeysParameterName: ${SSH_KEYS_PARAMETER_NAME}
 shutdown-hook-path: ${SHUTDOWN_HOOK_PATH}
 disconnect-after-job: ${DISCONNECT_AFTER_JOB}
 disconnect-after-idle-timeout: ${DISCONNECT_AFTER_IDLE_TIMEOUT}
