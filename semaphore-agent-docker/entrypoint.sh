@@ -11,6 +11,26 @@ SEMAPHORE_GIT_CACHE_AGE=${SEMAPHORE_GIT_CACHE_AGE:-"86400"}
 SEMAPHORE_CACHE_BACKEND=${SEMAPHORE_CACHE_BACKEND:-"s3"}
 SEMAPHORE_CACHE_S3_BUCKET=${SEMAPHORE_CACHE_S3_BUCKET:-""}
 
+# Check if required env variables are set
+if [[ -z "$SEMAPHORE_ENDPOINT" ]]; then
+    echo "Error: SEMAPHORE_ENDPOINT is required"
+    exit 1
+fi
+if [[ -z "$SEMAPHORE_AGENT_TOKEN" ]]; then
+    echo "Error: SEMAPHORE_AGENT_TOKEN is required"
+    exit 1
+fi
+if [[ -z "$SSH_KEYS_PARAMETER_NAME" ]]; then
+    echo "Error: SSH_KEYS_PARAMETER_NAME is required"
+    exit 1
+fi
+if [[ -z "$SEMAPHORE_CACHE_S3_BUCKET" ]]; then
+    echo "Error: SEMAPHORE_CACHE_S3_BUCKET is required"
+    exit 1
+fi
+
+
+
 # Ensure the directory exists
 mkdir -p /opt/semaphore
 
@@ -22,11 +42,6 @@ sshKeysParameterName: ${SSH_KEYS_PARAMETER_NAME}
 shutdown-hook-path: ${SHUTDOWN_HOOK_PATH}
 disconnect-after-job: ${DISCONNECT_AFTER_JOB}
 disconnect-after-idle-timeout: ${DISCONNECT_AFTER_IDLE_TIMEOUT}
-envVars: [
-    SEMAPHORE_GIT_CACHE_AGE=${SEMAPHORE_GIT_CACHE_AGE},
-    SEMAPHORE_CACHE_BACKEND=${SEMAPHORE_CACHE_BACKEND},
-    SEMAPHORE_CACHE_S3_BUCKET=${SEMAPHORE_CACHE_S3_BUCKET}
-]
 EOF
 
 echo "Configuration file generated:"
