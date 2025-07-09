@@ -47,7 +47,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C ~/.toolbox --strip-components=1 \
     && bash ~/.toolbox/install-toolbox \
     && rm -rf /tmp/* /var/tmp/* \
-    && apt clean 
+    && apt clean \
+    && apt-get purge -y build-essential autoconf m4 libncurses5-dev libwxgtk3.0-gtk3-dev libgl1-mesa-dev libglu1-mesa-dev libpng-dev libssh-dev unixodbc-dev xsltproc fop libxml2-utils libssl-dev \
+    && apt-get autoremove -y
 
 ## Setting up User and Tools
 
