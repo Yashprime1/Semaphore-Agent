@@ -27,7 +27,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xsltproc \
     fop \
     libxml2-utils \
-    openjdk-11-jdk \
     libssl-dev \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
