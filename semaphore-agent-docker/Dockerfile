@@ -1,9 +1,7 @@
 FROM semaphoreci/agent:v2.3.0
 
-# Switch to root user for package installation and builds
 USER root
 
-# Set timezone and frontend non-interactively
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
@@ -25,7 +23,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xsltproc \
     fop \
     libxml2-utils \
-    openjdk-11-jdk \
     libssl-dev \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -45,24 +42,42 @@ RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src
     && cd .. \
     && rm -rf otp_src_26.2.5.2/
 
+# Install Semaphore CLI tools
+RUN curl -L https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz \
+    && mv sem /usr/local/bin/ \
+    && chmod +x /usr/local/bin/sem    
+
 # Install Semaphore Toolbox
 RUN mkdir -p ~/.toolbox \
     && curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C ~/.toolbox --strip-components=1 \
     && bash ~/.toolbox/install-toolbox
 
-# Create necessary directories and set permissions
+# Create semaphore user's toolbox directory and copy tools
+ENV USER=semaphore
+
+RUN mkdir -p /home/${USER}/.toolbox \
+    && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
+    && chown -R ${USER}:${USER} /home/${USER}/.toolbox
+
+# Create symlinks in /usr/local/bin for semaphore user access
+RUN ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
+    && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
+    && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
+    && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
+    && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results \
+    && ln -sf /home/${USER}/.toolbox/checkout /usr/local/bin/libcheckout
+    
+
 RUN mkdir -p /opt/semaphore
 
-# Copy application scripts
+# Copy shutdown hook script
 COPY shutdown.sh /opt/semaphore/shutdown
 COPY entrypoint.sh /opt/semaphore/entrypoint.sh
 
-# Set executable permissions
 RUN chmod +x /opt/semaphore/shutdown \
     && chmod +x /opt/semaphore/entrypoint.sh
 
-RUN chown semaphore:semaphore /opt/semaphore/shutdown \
-    && chown semaphore:semaphore /opt/semaphore/entrypoint.sh
-USER semaphore
-# Set the entrypoint
+RUN chown ${USER}:${USER} /opt/semaphore/shutdown \
+    && chown ${USER}:${USER} /opt/semaphore/entrypoint.sh
+
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
