@@ -60,7 +60,9 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && chown -R ${USER}:${USER} /home/${USER}/.toolbox
 
 # Create symlinks in /usr/local/bin for semaphore user access
-RUN ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
+RUN source /home/${USER}/.toolbox/libcheckout \
+    && source /home/${USER}/.toolbox/libchecksum \
+    && ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
     && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
     && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
     && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
