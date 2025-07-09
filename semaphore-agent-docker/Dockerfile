@@ -65,6 +65,8 @@ RUN apt-get update && \
     jq \
     git \
     libncurses5 \
+    python3 \
+    python3-pip \
     ${SSL_PKG:-libssl-dev} \
     openssh-client \
     ca-certificates \
