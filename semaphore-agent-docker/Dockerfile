@@ -44,7 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && mv sem /usr/local/bin/ \
     && chmod +x /usr/local/bin/sem \
     && mkdir -p ~/.toolbox \
-    && curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-size-linux.tar | tar -x -C ~/.toolbox --strip-components=1 \
+    && curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C ~/.toolbox --strip-components=1 \
     && bash ~/.toolbox/install-toolbox \
     && rm -rf /tmp/* /var/tmp/*
 
