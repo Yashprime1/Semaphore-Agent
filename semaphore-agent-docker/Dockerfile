@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fop \
     libxml2-utils \
     libssl-dev \
+    openssh-client \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
