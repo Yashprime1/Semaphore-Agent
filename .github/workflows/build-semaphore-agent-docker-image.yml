@@ -9,18 +9,9 @@ jobs:
   build-default-semaphore-agent-docker:
     runs-on: ubuntu-latest
     steps:
-      - name: Generate github token
-        id: generate-github-token
-        uses: tibdex/github-app-token@v2.1.0
-        with:
-          app_id: ${{ secrets.CLEVERTAP_SNE_BOT_ID }}
-          private_key: ${{ secrets.CLEVERTAP_SNE_BOT_PRIVATE_ACCESS_KEY }}
-
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ steps.generate-github-token.outputs.token }}
-
+        
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
