@@ -50,8 +50,6 @@ RUN mkdir -p ~/.toolbox \
     && curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C ~/.toolbox --strip-components=1 \
     && bash ~/.toolbox/install-toolbox
 
-USER semaphore
-
 # Create necessary directories and set permissions
 RUN mkdir -p /opt/semaphore
 
@@ -63,5 +61,8 @@ COPY entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/shutdown \
     && chmod +x /opt/semaphore/entrypoint.sh
 
+RUN chown semaphore:semaphore /opt/semaphore/shutdown \
+    && chown semaphore:semaphore /opt/semaphore/entrypoint.sh
+USER semaphore
 # Set the entrypoint
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
