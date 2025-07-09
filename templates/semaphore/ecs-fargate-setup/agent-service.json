@@ -176,6 +176,14 @@
                 }
               },
               {
+                "Name":"DISCONNECT_AFTER_JOB",
+                "Value": "true"
+              },
+              {
+                "Name":"DISCONNECT_AFTER_IDLE_TIMEOUT",
+                "Value": "30"
+              },
+              {
                 "Name":"AWS_REGION",
                 "Value": {
                   "Ref": "AWS::Region"  
