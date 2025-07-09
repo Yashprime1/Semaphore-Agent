@@ -63,6 +63,8 @@ FROM semaphoreci/agent:v2.3.0 AS runtime
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
+USER root
+
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
