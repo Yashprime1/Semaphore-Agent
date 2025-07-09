@@ -2,6 +2,8 @@
 # Stage 1: Build stage - contains all build tools and dependencies
 FROM semaphoreci/agent:v2.3.0 AS builder
 
+USER root
+
 # Set timezone and frontend non-interactively
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
