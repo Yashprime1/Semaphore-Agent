@@ -57,7 +57,7 @@ USER root
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-# Install only runtime dependencies
+# Install runtime dependencies with proper Python setup
 RUN apt-get update && \
     # Find the correct libssl package name
     SSL_PKG=$(apt-cache search '^libssl[0-9]' | head -1 | cut -d' ' -f1) && \
@@ -67,12 +67,17 @@ RUN apt-get update && \
     libncurses5 \
     python3 \
     python3-pip \
+    python3-dev \
+    libpython3-dev \
     ${SSL_PKG:-libssl-dev} \
     openssh-client \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/* \
     && rm -rf /var/tmp/*
+
+# Fix Python shared library paths
+RUN ldconfig
 
 # Copy only the required binaries from the builder stage
 COPY --from=builder /usr/local/bin/aws /usr/local/bin/
@@ -85,6 +90,8 @@ COPY --from=builder /root/.toolbox /root/.toolbox
 
 # Create semaphore user's toolbox directory
 ENV USER=semaphore
+ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LIBRARY_PATH
+
 RUN mkdir -p /home/${USER}/.toolbox \
     && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
     && chown -R ${USER}:${USER} /home/${USER}/.toolbox
@@ -116,5 +123,6 @@ RUN chmod +x /opt/semaphore/shutdown \
     && chmod +x /opt/semaphore/entrypoint.sh \
     && chown ${USER}:${USER} /opt/semaphore/shutdown \
     && chown ${USER}:${USER} /opt/semaphore/entrypoint.sh
+
 
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
