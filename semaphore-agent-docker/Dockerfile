@@ -59,9 +59,20 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
     && chown -R ${USER}:${USER} /home/${USER}/.toolbox
 
+# Creating a standalone checkout script with wrapper
+RUN echo '#!/bin/bash' > /usr/local/bin/checkout \
+    && echo 'source /home/semaphore/.toolbox/libcheckout' >> /usr/local/bin/checkout \
+    && echo 'checkout "$@"' >> /usr/local/bin/checkout \
+    && chmod +x /usr/local/bin/checkout
+
+RUN echo '#!/bin/bash' > /usr/local/bin/checksum \
+    && echo 'source /home/semaphore/.toolbox/libchecksum' >> /usr/local/bin/checksum \
+    && echo 'checksum "$@"' >> /usr/local/bin/checksum \
+    && chmod +x /usr/local/bin/checksum
+
+
 # Create symlinks for toolbox scripts in /usr/local/bin
-RUN bash -c 'source /home/${USER}/.toolbox/libcheckout && source /home/${USER}/.toolbox/libchecksum' \
-    && ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
+RUN ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
     && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
     && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
     && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
