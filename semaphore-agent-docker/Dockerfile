@@ -65,10 +65,10 @@ RUN apt-get update && \
     jq \
     git \
     libncurses5 \
-    python3 \
-    python3-pip \
-    python3-dev \
-    libpython3-dev \
+    python3.13 \
+    python3.13-pip \
+    python3.13-dev \
+    libpython3.13-dev \
     ${SSL_PKG:-libssl-dev} \
     openssh-client \
     ca-certificates \
@@ -76,8 +76,6 @@ RUN apt-get update && \
     && rm -rf /tmp/* \
     && rm -rf /var/tmp/*
 
-# Fix Python shared library paths
-RUN ldconfig
 
 # Copy only the required binaries from the builder stage
 COPY --from=builder /usr/local/bin/aws /usr/local/bin/
@@ -90,7 +88,6 @@ COPY --from=builder /root/.toolbox /root/.toolbox
 
 # Create semaphore user's toolbox directory
 ENV USER=semaphore
-ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LIBRARY_PATH
 
 RUN mkdir -p /home/${USER}/.toolbox \
     && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
