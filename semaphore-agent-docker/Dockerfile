@@ -62,7 +62,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     git \
     libncurses5 \
-    libssl3 \
+    libssl1.1 \
     openssh-client \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
