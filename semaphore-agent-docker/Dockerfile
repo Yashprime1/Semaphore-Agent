@@ -45,3 +45,9 @@ RUN echo "Installing semaphoreci tools" && \
 
 COPY shutdown.sh /opt/semaphore/shutdown
 RUN chmod +x /opt/semaphore/shutdown
+
+COPY entrypoint.sh /opt/semaphore/entrypoint.sh
+RUN chmod +x /opt/semaphore/entrypoint.sh
+
+
+ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
