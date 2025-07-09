@@ -60,13 +60,12 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && chown -R ${USER}:${USER} /home/${USER}/.toolbox
 
 # Create symlinks for toolbox scripts in /usr/local/bin
-RUN bash -c '. /home/${USER}/.toolbox/libcheckout && . /home/${USER}/.toolbox/libchecksum' \
+RUN bash -c 'source /home/${USER}/.toolbox/libcheckout && source /home/${USER}/.toolbox/libchecksum' \
     && ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
     && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
     && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
     && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
-    && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results \
-    && ln -sf /home/${USER}/.toolbox/checkout /usr/local/bin/libcheckout
+    && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results 
     
 
 RUN mkdir -p /opt/semaphore
