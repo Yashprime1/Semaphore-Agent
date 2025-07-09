@@ -59,9 +59,8 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
     && chown -R ${USER}:${USER} /home/${USER}/.toolbox
 
-# Create symlinks in /usr/local/bin for semaphore user access
-RUN source /home/${USER}/.toolbox/libcheckout \
-    && source /home/${USER}/.toolbox/libchecksum \
+# Create symlinks for toolbox scripts in /usr/local/bin
+RUN bash -c '. /home/${USER}/.toolbox/libcheckout && . /home/${USER}/.toolbox/libchecksum' \
     && ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
     && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
     && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
