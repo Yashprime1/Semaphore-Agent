@@ -4,8 +4,7 @@ USER root
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-# Install all dependencies (build and runtime), download/install AWS CLI,
-# build/install Erlang, install Semaphore CLI, and install Toolbox in one go.
+# Install all dependencies AWS CLI,build/install Erlang, install Semaphore CLI, and install Toolbox in one go.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
@@ -49,8 +48,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && bash ~/.toolbox/install-toolbox \
     && rm -rf /tmp/* /var/tmp/*
 
----
-
 ## Setting up User and Tools
 
 ENV USER=semaphore
@@ -70,8 +67,6 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
     && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
     && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results
-
----
 
 ## Final Configuration
 
