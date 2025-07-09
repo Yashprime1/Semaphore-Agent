@@ -190,6 +190,20 @@
                 }
               },
               {
+                "Name":"SEMAPHORE_GIT_CACHE_AGE",
+                "Value": "86400"
+              },
+              {
+                "Name":"SEMAPHORE_CACHE_BACKEND",
+                "Value": "s3"
+              },
+              {
+                "Name":"SEMAPHORE_CACHE_S3_BUCKET",
+                "Value": {
+                  "Fn::ImportValue": "System-SharedResources-SemaphoreCachingS3BucketName"
+                }
+              },
+              {
                 "Name":"AWS_REGION",
                 "Value": {
                   "Ref": "AWS::Region"  
