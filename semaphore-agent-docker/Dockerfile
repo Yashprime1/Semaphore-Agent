@@ -47,7 +47,7 @@ RUN curl -L https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Lin
 
 # Install Semaphore Toolbox
 RUN mkdir -p ~/.toolbox \
-    && curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-size-linux.tar | tar -x -C ~/.toolbox --strip-components=1 \
+    && curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C ~/.toolbox --strip-components=1 \
     && bash ~/.toolbox/install-toolbox
 
 # Final stage
@@ -58,11 +58,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
 # Install only runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    # Find the correct libssl package name
+    SSL_PKG=$(apt-cache search '^libssl[0-9]' | head -1 | cut -d' ' -f1) && \
+    apt-get install -y --no-install-recommends \
     jq \
     git \
     libncurses5 \
-    libssl1.1 \
+    ${SSL_PKG:-libssl-dev} \
     openssh-client \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
