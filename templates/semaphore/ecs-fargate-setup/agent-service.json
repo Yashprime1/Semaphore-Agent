@@ -424,54 +424,6 @@
       },
       "Type": "AWS::ApplicationAutoScaling::ScalableTarget"
     },
-    "SemaphoreAgentConfigSsmParameter": {
-      "Type": "AWS::SSM::Parameter",
-      "Properties": {
-        "Description": "Semaphore agent config",
-        "Name": {
-          "Fn::Sub": "${AWS::StackName}-Config"
-        },
-        "Tier": "Standard",
-        "Type": "String",
-        "Value": {
-          "Fn::Join": [
-            "",
-            [
-              "{",
-              "\"endpoint\":\"",
-              {
-                "Ref": "SemaphoreEndpoint"
-              },
-              "\",",
-              "\"agentTokenParameterName\":\"",
-              {
-                "Ref": "SemaphoreAgentRegistrationTokenSsmParameter"
-              },
-              "\",",
-              "\"sshKeysParameterName\":\"",
-              {
-                "Fn::ImportValue": "Semaphore-GitHubSshKeyFingerprint-GithubPublicSshKeyFingerprintSSMParameterName"
-              },
-              "\",",
-              "\"disconnectAfterJob\":\"true\",",
-              "\"disconnectAfterIdleTimeout\":\"300\",",
-              "\"envVars\":[",
-              "\"SEMAPHORE_GIT_CACHE_AGE=86400\",",
-              "\"SEMAPHORE_CACHE_BACKEND=s3\",",
-              "\"SEMAPHORE_CACHE_S3_BUCKET=",
-              {
-                "Fn::ImportValue": "System-SharedResources-SemaphoreCachingS3BucketName"
-              },
-              "\",",
-              "\"SEMAPHORE_CACHE_USE_EC2_INSTANCE_PROFILE=true\"",
-              "],",
-              "\"usePreSignedURL\":false",
-              "}"
-            ]
-          ]
-        }
-      }
-    },
     "SemaphoreAgentScalerLambdaIamRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
