@@ -2,6 +2,7 @@
 # Stage 1: Build stage - contains all build tools and dependencies
 FROM semaphoreci/agent:v2.3.0 AS builder
 
+# Switch to root user for package installation and builds
 USER root
 
 # Set timezone and frontend non-interactively
@@ -59,19 +60,21 @@ RUN mkdir -p ~/.toolbox \
 # Stage 2: Runtime stage - minimal image with only runtime dependencies
 FROM semaphoreci/agent:v2.3.0 AS runtime
 
+# Switch to root user for package installation
+USER root
+
 # Set timezone and frontend non-interactively
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-
-USER root
 
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     jq \
     libncurses5 \
-    libssl3 \
+    libssl1.1 \
     ca-certificates \
+    openssl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
