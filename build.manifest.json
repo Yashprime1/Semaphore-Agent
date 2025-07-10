@@ -146,6 +146,14 @@
         },
         {
           "StackName": "Semaphore-Ecs-s1-Agent",
+          "DependsOn": [
+            "cfstack-Init",
+            "System-Network",
+            "System-SecurityGroup",
+            "System-SharedResources",
+            "CloudWatchLogRetention-CustomResource",
+            "Semaphore-GitHubSshKeyFingerprint"
+          ],
           "Action": "CREATE",
           "TemplatePath": "templates/semaphore/ecs-fargate-setup/agent.json",
           "Parameters": {
