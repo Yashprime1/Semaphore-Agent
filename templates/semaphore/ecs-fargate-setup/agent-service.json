@@ -271,7 +271,7 @@
             "User":"semaphore",
             "Essential": true,
             "Image": {
-              "Fn::Sub":"yashprime07/semaphore-agent:latest"
+              "Fn::Sub":"artifactory.clevertap.net/clevertap/semaphore-agent:${ContainerTag}"
             },
             "LogConfiguration": {
               "LogDriver": "splunk",
