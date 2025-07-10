@@ -189,10 +189,7 @@
               ],
               "Resource": [
                 {
-                  "Fn::GetAtt": [
-                    "SemaphoreAgentEcsService",
-                    "Arn"   
-                  ]
+                  "Ref": "SemaphoreAgentEcsService"
                 }
               ]
             }
@@ -610,10 +607,7 @@
               "Effect": "Allow",
               "Resource":[
                 {
-                  "Fn::GetAtt": [
-                    "SemaphoreAgentEcsService",
-                    "Arn"
-                  ]
+                  "Ref": "SemaphoreAgentEcsService"
                 }
               ]
             },
