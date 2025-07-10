@@ -27,5 +27,5 @@ jobs:
         with:
           context: ./semaphore-agent-docker
           push: true
-          tags: artifactory.clevertap.net/semaphore-agent:${{ github.ref_name }}-${{ github.run_number }}
+          tags: artifactory.clevertap.net/clevertap/semaphore-agent:${{ github.ref_name }}-${{ github.run_number }}
           platforms: linux/amd64
