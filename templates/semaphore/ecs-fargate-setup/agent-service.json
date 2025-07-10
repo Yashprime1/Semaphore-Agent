@@ -103,12 +103,12 @@
                 },
                 {
                   "Fn::ImportValue": {
-                    "Fn::Sub": "${NetworkStack}-SharedResources-ArtifactoryDockerUserCredentialsSecretsManagerSecretArn"
+                    "Fn::Sub": "${StackPrefix}-SharedResources-ArtifactoryDockerUserCredentialsSecretsManagerSecretArn"
                   }
                 },
                 {
                   "Fn::ImportValue": {
-                    "Fn::Sub": "${NetworkStack}-SharedResources-SplunkTokenSecretsManagerSecretArn"
+                    "Fn::Sub": "${StackPrefix}-SharedResources-SplunkTokenSecretsManagerSecretArn"
                   }
                 }
               ]
@@ -298,7 +298,7 @@
                       [
                         {
                           "Fn::ImportValue": {
-                            "Fn::Sub": "${NetworkStack}-SharedResources-SplunkTokenSecretsManagerSecretArn"
+                            "Fn::Sub": "${StackPrefix}-SharedResources-SplunkTokenSecretsManagerSecretArn"
                           }
                         },
                         "splunk-token::"
@@ -311,7 +311,7 @@
             "RepositoryCredentials": {
               "CredentialsParameter": {
                 "Fn::ImportValue": {
-                  "Fn::Sub": "${NetworkStack}-SharedResources-ArtifactoryDockerUserCredentialsSecretsManagerSecretArn"
+                  "Fn::Sub": "${StackPrefix}-SharedResources-ArtifactoryDockerUserCredentialsSecretsManagerSecretArn"
                 }
               }
             },
