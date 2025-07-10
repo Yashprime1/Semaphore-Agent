@@ -172,6 +172,36 @@
             "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/ecs_scaler.zip"
           },
           "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-Ecs-s1-Agent",
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/ecs-fargate-setup/agent.json",
+          "Parameters": {
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "Semaphore-Ecs-s1-Agent-Service",
+          "DependsOn": [
+            "Semaphore-Ecs-s1-Agent"
+          ],
+          "Action": "CREATE",
+          "TemplatePath": "templates/semaphore/ecs-fargate-setup/agent-service.json",
+          "Parameters": {
+            "NetworkStack": "System-Network",
+            "StackPrefix":"System",
+            "ContainerTag": "v2.3.0",
+            "Memory": "512",
+            "Cpu": "256",
+            "MinTasks": "0",
+            "MaxTasks": "30",
+            "MaximumPercent": "200",
+            "MinimumHealthyPercent": "100",
+            "DesiredCapacity": "0",
+            "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/ecs_scaler.zip"
+          },
+          "StackPolicy": {}
         }
       ]
     }

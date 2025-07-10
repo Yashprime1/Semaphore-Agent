@@ -4,6 +4,10 @@
       "Description": "Name of the stack that this stack references for networking and shared resources",
       "Type": "String"
     },
+    "StackPrefix": {
+      "Description": "Name of the stack prefix",
+      "Type": "String"
+    },
     "SemaphoreEndpoint": {
       "Type": "String",
       "Default": "clevertap.semaphoreci.com",
@@ -42,15 +46,6 @@
     }
   },
   "Resources": {
-    "LogGroup": {
-      "Type": "AWS::Logs::LogGroup",
-      "Properties": {
-        "LogGroupName": {
-          "Fn::Sub": "/aws/ecs/${AWS::StackName}"
-        },
-        "RetentionInDays": 7
-      }
-    },
     "SemaphoreAgentEcsTaskDefinitionIamRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -91,9 +86,33 @@
             {
               "Sid": "AllowSecretsRetreiveValue",
               "Effect": "Allow",
-              "Action": ["*"],
-              "Resource": ["*"]
-            }
+              "Action": ["secretsmanager:GetSecretValue"],
+              "Resource": [
+                {
+                  "Fn::ImportValue": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        {
+                          "Ref":"AWS::StackName"
+                        },
+                        "SemaphoreAgentTokenSecretsManagerSecretArn"
+                      ]
+                    ]
+                  }
+                },
+                {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-SharedResources-ArtifactoryDockerUserCredentialsSecretsManagerSecretArn"
+                  }
+                },
+                {
+                  "Fn::ImportValue": {
+                    "Fn::Sub": "${NetworkStack}-SharedResources-SplunkTokenSecretsManagerSecretArn"
+                  }
+                }
+              ]
+            }   
           ]
         },
         "Roles": [
@@ -138,10 +157,44 @@
         "PolicyDocument": {
           "Statement": [
             {
-              "Action": ["*"],
+              "Sid": "AllowSsmParameter",
               "Effect": "Allow",
-              "Resource": ["*"],
-              "Sid": "AllowRunCommandsToExecuteECSCommandsInFargate"
+              "Action": [
+                "ssm:GetParameter"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::Sub": "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/"
+                      },
+                      {
+                        "Fn::ImportValue": "Semaphore-GitHubSshKeyFingerprint-GithubPublicSshKeyFingerprintSSMParameterName"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Sid": "AllowEcsTaskActions",
+              "Effect": "Allow",
+              "Action": [
+                "ecs:DescribeTasks",
+                "ecs:ListTasks",
+                "ecs:DescribeServices",
+                "ecs:UpdateService"
+              ],
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "SemaphoreAgentEcsService",
+                    "Arn"   
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -200,7 +253,7 @@
               {
                 "Name":"SEMAPHORE_CACHE_S3_BUCKET",
                 "Value": {
-                  "Fn::ImportValue": "System-SharedResources-SemaphoreCachingS3BucketName"
+                  "Fn::ImportValue": "${StackPrefix}-SharedResources-SemaphoreCachingS3BucketName"
                 }
               },
               {
@@ -217,25 +270,47 @@
               }
             ],
             "User":"semaphore",
-            "Command": [
-              "sh",
-              "-c",
-              "mkdir -p /opt/semaphore && cat > /opt/semaphore/semaphore-agent.yml << EOF\nendpoint: ${SEMAPHORE_ENDPOINT}\ntoken: ${SEMAPHORE_AGENT_TOKEN}\nshutdown-hook-path: /opt/semaphore/shutdown\ndisconnect-after-job: true\ndisconnect-after-idle-timeout: 30\nEOF\n/opt/semaphore/agent start --config-file /opt/semaphore/semaphore-agent.yml"
-            ],
             "Essential": true,
             "Image": {
               "Fn::Sub":"yashprime07/semaphore-agent:latest"
             },
             "LogConfiguration": {
-              "LogDriver": "awslogs",
+              "LogDriver": "splunk",
               "Options": {
-                "awslogs-group": {
-                  "Ref": "LogGroup"
+                "splunk-format": "raw",
+                "splunk-verify-connection": "false",
+                "splunk-index": "semaphore-ecs-agents",
+                "splunk-source": {
+                  "Ref": "AWS::StackName"
                 },
-                "awslogs-region": {
-                  "Ref": "AWS::Region"
-                },
-                "awslogs-stream-prefix": "ecs"
+                "splunk-sourcetype": "stdout",
+                "labels": "stack",
+                "splunk-url":  "https://http-inputs.clevertap.splunkcloud.com"
+              },
+              "SecretOptions": [
+                {
+                  "Name": "splunk-token",
+                  "ValueFrom": {
+                    "Fn::Join": [
+                      ":",
+                      [
+                        {
+                          "Fn::ImportValue": {
+                            "Fn::Sub": "${NetworkStack}-SharedResources-SplunkTokenSecretsManagerSecretArn"
+                          }
+                        },
+                        "splunk-token::"
+                      ]
+                    ]
+                  }
+                }
+              ]
+            },
+            "RepositoryCredentials": {
+              "CredentialsParameter": {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${NetworkStack}-SharedResources-ArtifactoryDockerUserCredentialsSecretsManagerSecretArn"
+                }
               }
             },
             "MemoryReservation": 128,
@@ -262,7 +337,17 @@
               {
                 "Name": "SEMAPHORE_AGENT_TOKEN",
                 "ValueFrom": {
-                  "Ref": "SemaphoreAgentTokenSecretsManagerSecret"
+                  "Fn::ImportValue": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        {
+                          "Ref":"AWS::StackName"
+                        },
+                        "SemaphoreAgentTokenSecretsManagerSecretArn"
+                      ]
+                    ]
+                  }
                 }
               }
             ]
@@ -302,7 +387,9 @@
             "Fn::Join": [
               "-",
               [
-                "Semaphore-Ecs-Agent",
+                {
+                  "Ref":"AWS::StackName"
+                },
                 "SemaphoreAgentEcsClusterName"
               ]
             ]
@@ -340,7 +427,7 @@
             "SecurityGroups": [
               {
                 "Fn::ImportValue": {
-                  "Fn::Sub": "System-SecurityGroup-SemaphoreAgentEc2SecurityGroupId"
+                  "Fn::Sub": "${StackPrefix}-SecurityGroup-SemaphoreAgentEc2SecurityGroupId"
                 }
               }
             ],
@@ -398,7 +485,9 @@
                   "Fn::Join": [
                     "-",
                     [
-                      "Semaphore-Ecs-Agent",
+                      {
+                        "Ref":"AWS::StackName"
+                      },
                       "SemaphoreAgentEcsClusterName"
                     ]
                   ]
@@ -473,9 +562,70 @@
         "PolicyDocument": {
           "Statement": [
             {
-              "Action": ["*"],
+              "Action": [
+                "ssm:GetParameter"
+              ],
               "Effect": "Allow",
-              "Resource": ["*"]
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:*:ssm:",
+                      {
+                        "Ref": "AWS::Region"
+                      },        
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":parameter/",
+                      {
+                        "Fn::ImportValue": {
+                          "Fn::Join": [
+                            "-",
+                            [
+                              {
+                                "Ref":"AWS::StackName"
+                              },
+                              "SemaphoreAgentRegistrationTokenSsmParameterName"
+                            ]
+                          ]
+                        }
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Action": [
+                "ecs:DescribeServices",
+                "ecs:UpdateService",
+                "ecs:ListTasks",
+                "ecs:DescribeTasks"
+              ],
+              "Effect": "Allow",
+              "Resource":[
+                {
+                  "Fn::GetAtt": [
+                    "SemaphoreAgentEcsService",
+                    "Arn"
+                  ]
+                }
+              ]
+            },
+            {
+              "Action":[
+                "application-autoscaling:DescribeScalableTargets",
+                "application-autoscaling:RegisterScalableTarget"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Sub":"arn:aws:application-autoscaling:${AWS::Region}:${AWS::AccountId}:scalable-target/*"
+                }
+              ]    
             }
           ],
           "Version": "2012-10-17"
@@ -505,7 +655,17 @@
         "Environment": {
           "Variables": {
             "SEMAPHORE_AGENT_TOKEN_PARAMETER_NAME": {
-              "Ref": "SemaphoreAgentRegistrationTokenSsmParameter"
+              "Fn::ImportValue":{
+                "Fn::Join": [
+                  "-",
+                  [
+                    {
+                      "Ref":"AWS::StackName"
+                    },
+                    "SemaphoreAgentRegistrationTokenSsmParameterName"
+                  ]
+                ]
+              }
             },
             "SEMAPHORE_AGENT_STACK_NAME": {
               "Ref": "AWS::StackName"
@@ -518,7 +678,9 @@
                 "Fn::Join": [
                   "-",
                   [
-                    "Semaphore-Ecs-Agent",
+                    {
+                      "Ref":"AWS::StackName"
+                    },
                     "SemaphoreAgentEcsClusterName"
                   ]
                 ]
@@ -547,7 +709,7 @@
         "VpcConfig": {
           "SecurityGroupIds": [
             {
-              "Fn::ImportValue": "System-SecurityGroup-SemaphoreAgentScalerLambdaEc2SecurityGroupId"
+              "Fn::ImportValue": "${StackPrefix}-SecurityGroup-SemaphoreAgentScalerLambdaEc2SecurityGroupId"
             }
           ],
           "SubnetIds": [
@@ -627,28 +789,6 @@
             "Arn"
           ]
         }
-      }
-    },
-    "SemaphoreAgentRegistrationTokenSsmParameter": {
-      "Type": "AWS::SSM::Parameter",
-      "Properties": {
-        "Description": "Semaphore agent registration token",
-        "Name": {
-          "Fn::Sub": "${AWS::StackName}-Agent-Registration-Token"
-        },
-        "Tier": "Standard",
-        "Type": "String",
-        "Value": "replace_me"
-      }
-    },
-    "SemaphoreAgentTokenSecretsManagerSecret":{
-      "Type": "AWS::SecretsManager::Secret",
-      "Properties": {
-        "Name": {
-          "Fn::Sub": "${AWS::StackName}-SemaphoreAgentToken"
-        },
-        "Description": "Semaphore Agent Registration Token",
-        "SecretString": "repalce_me"
       }
     }
   }

@@ -309,6 +309,22 @@
           }
         ]
       }
+    },
+    "ArtifactoryDockerUserCredentialsSecretsManagerSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description":"This is a Secrets Manager secret for Artifactory docker user credentials",
+        "SecretString": "{\"username\":\"secret-user\",\"password\":\"secret-password\"}"
+      }
+    },
+    "SplunkTokenSecretsManagerSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": {
+          "Fn::Sub": "This is a Secrets Manager secret for ${AWS::StackName}-SplunkTokenSecretsManagerSecret"
+        },
+        "SecretString": "{\"splunk-token\":\"replacesplunktoken\"}"
+      }
     }
   },
   "Outputs": {
@@ -369,6 +385,26 @@
           "SemaphoreAuditLogsS3Bucket",
           "Arn"
         ]
+      }
+    },
+    "ArtifactoryDockerUserCredentialsSecretsManagerSecretArn": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-ArtifactoryDockerUserCredentialsSecretsManagerSecretArn"
+        }
+      },
+      "Value": {
+        "Ref": "ArtifactoryDockerUserCredentialsSecretsManagerSecret"
+      }
+    },
+    "SplunkTokenSecretsManagerSecretArn": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-SplunkTokenSecretsManagerSecretArn"
+        }
+      },
+      "Value": {
+        "Ref": "SplunkTokenSecretsManagerSecret"
       }
     }
   }

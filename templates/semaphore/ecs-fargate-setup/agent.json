@@ -3,17 +3,59 @@
     "SemaphoreAgentEcsCluster": {
       "Type": "AWS::ECS::Cluster",
       "Properties": {}
+    },
+    "SemaphoreAgentRegistrationTokenSsmParameter": {
+      "Type": "AWS::SSM::Parameter",
+      "Properties": {
+        "Description": "Semaphore agent registration token",
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-Agent-Registration-Token"
+        },
+        "Tier": "Standard",
+        "Type": "String",
+        "Value": "replace_me"
+      }
+    },
+    "SemaphoreAgentTokenSecretsManagerSecret":{
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-SemaphoreAgentToken"
+        },
+        "Description": "Semaphore Agent Registration Token",
+        "SecretString": "repalce_me"
+      }
     }
   },
   "Outputs": {
     "SemaphoreAgentEcsClusterName": {
       "Export": {
         "Name": {
-          "Fn::Sub": "${AWS::StackName}-SemaphoreAgentEcsClusterName"
+          "Fn::Sub": "${AWS::StackName}-Service-SemaphoreAgentEcsClusterName"
         }
       },
       "Value": {
         "Ref": "SemaphoreAgentEcsCluster"
+      }
+    },
+    "SemaphoreAgentRegistrationTokenSsmParameterName": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-Service-SemaphoreAgentRegistrationTokenSsmParameterName"
+        }
+      },
+      "Value": {
+        "Ref": "SemaphoreAgentRegistrationTokenSsmParameter"
+      }
+    },
+    "SemaphoreAgentTokenSecretsManagerSecretArn": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-Service-SemaphoreAgentTokenSecretsManagerSecretArn"
+        }
+      },
+      "Value": {
+        "Ref": "SemaphoreAgentTokenSecretsManagerSecret"
       }
     }
   }
