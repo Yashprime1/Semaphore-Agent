@@ -622,6 +622,15 @@
                   "Fn::Sub":"arn:aws:application-autoscaling:${AWS::Region}:${AWS::AccountId}:scalable-target/*"
                 }
               ]    
+            },
+            {
+              "Action":[
+                "cloudwatch:PutMetricData"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                "*"
+              ]
             }
           ],
           "Version": "2012-10-17"
