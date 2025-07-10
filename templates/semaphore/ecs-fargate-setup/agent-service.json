@@ -253,7 +253,9 @@
               {
                 "Name":"SEMAPHORE_CACHE_S3_BUCKET",
                 "Value": {
-                  "Fn::ImportValue": "${StackPrefix}-SharedResources-SemaphoreCachingS3BucketName"
+                  "Fn::ImportValue": {
+                    "Fn::Sub":"${StackPrefix}-SharedResources-SemaphoreCachingS3BucketName"
+                  }
                 }
               },
               {
@@ -709,7 +711,9 @@
         "VpcConfig": {
           "SecurityGroupIds": [
             {
-              "Fn::ImportValue": "${StackPrefix}-SecurityGroup-SemaphoreAgentScalerLambdaEc2SecurityGroupId"
+              "Fn::ImportValue": {
+                "Fn::Sub":"${StackPrefix}-SecurityGroup-SemaphoreAgentScalerLambdaEc2SecurityGroupId"
+              }
             }
           ],
           "SubnetIds": [
