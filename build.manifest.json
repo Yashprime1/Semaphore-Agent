@@ -170,7 +170,7 @@
           "Parameters": {
             "NetworkStack": "System-Network",
             "StackPrefix":"System",
-            "ContainerTag": "master-42",
+            "ContainerTag": "master-43",
             "Memory": "512",
             "Cpu": "256",
             "MinTasks": "0",
