@@ -57,6 +57,8 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && echo '#!/bin/bash' > /usr/local/bin/checkout \
     && echo 'source /home/semaphore/.toolbox/libcheckout' >> /usr/local/bin/checkout \
     && echo 'checkout "$@"' >> /usr/local/bin/checkout \
+    && echo 'pwd' >> /usr/local/bin/checkout \
+    && echo 'ls' >> /usr/local/bin/checkout \
     && echo 'cd "$SEMAPHORE_GIT_REPO_NAME"' >> /usr/local/bin/checkout \
     && chmod +x /usr/local/bin/checkout \
     && echo '#!/bin/bash' > /usr/local/bin/checksum \
