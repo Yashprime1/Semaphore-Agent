@@ -35,32 +35,195 @@ jobs:
 
       - name: Update version to OS 24
         run: |
-          # Debug: List files to see what's available
-          echo "Current directory contents:"
-          ls -la
-          echo "Looking for ansible directory:"
-          find . -name "ansible" -type d
-          echo "Looking for ubuntu-focal.yml:"
-          find . -name "ubuntu-focal.yml"
+          # Create the update script
+          cat > update_to_ubuntu24.py << 'EOF'
+          #!/usr/bin/env python3
+          """
+          Script to update Packer configuration from Ubuntu Focal 20.04 to Noble 24.04
+          and fix Python package installation for Ubuntu 24.04 compatibility.
+          """
           
-          # Update AMI filter to use Ubuntu Noble 24.04 instead of Focal 20.04
-          find . -name "*.pkr.hcl" -o -name "*.json" | xargs sed -i 's/ubuntu-focal-20\.04/ubuntu-noble-24.04/g'
+          import os
+          import sys
+          import re
+          import glob
+          import shutil
+          from pathlib import Path
           
-          # Create ubuntu-noble.yml playbook by copying ubuntu-focal.yml
-          FOCAL_PLAYBOOK=$(find . -name "ubuntu-focal.yml" | head -1)
-          if [ -n "$FOCAL_PLAYBOOK" ]; then
-            NOBLE_PLAYBOOK=$(dirname "$FOCAL_PLAYBOOK")/ubuntu-noble.yml
-            echo "Copying $FOCAL_PLAYBOOK to $NOBLE_PLAYBOOK"
-            cp "$FOCAL_PLAYBOOK" "$NOBLE_PLAYBOOK"
-            # Update the playbook name inside the file
-            sed -i 's/Ubuntu Focal 20\.04/Ubuntu Noble 24.04/g' "$NOBLE_PLAYBOOK"
-          else
-            echo "ERROR: ubuntu-focal.yml not found!"
-            exit 1
-          fi
+          def find_files_by_pattern(pattern):
+              """Find files matching the given pattern."""
+              return glob.glob(pattern, recursive=True)
           
-          # Update Packer HCL files to use the new playbook
-          find . -name "*.pkr.hcl" | xargs sed -i 's/ubuntu-focal\.yml/ubuntu-noble.yml/g'
+          def update_ami_filters():
+              """Update AMI filters from focal-20.04 to noble-24.04."""
+              print("Updating AMI filters...")
+              
+              # Find all HCL and JSON files
+              hcl_files = find_files_by_pattern("**/*.pkr.hcl")
+              json_files = find_files_by_pattern("**/*.json")
+              
+              all_files = hcl_files + json_files
+              
+              for filepath in all_files:
+                  try:
+                      with open(filepath, 'r') as f:
+                          content = f.read()
+                      
+                      # Replace ubuntu-focal-20.04 with ubuntu-noble-24.04
+                      updated_content = content.replace('ubuntu-focal-20.04', 'ubuntu-noble-24.04')
+                      
+                      if content != updated_content:
+                          with open(filepath, 'w') as f:
+                              f.write(updated_content)
+                          print(f"Updated AMI filter in: {filepath}")
+                          
+                  except Exception as e:
+                      print(f"Error updating {filepath}: {e}")
+          
+          def create_noble_playbook():
+              """Create ubuntu-noble.yml by copying ubuntu-focal.yml."""
+              print("Creating Noble playbook...")
+              
+              # Find ubuntu-focal.yml
+              focal_files = find_files_by_pattern("**/ubuntu-focal.yml")
+              
+              if not focal_files:
+                  print("ERROR: ubuntu-focal.yml not found!")
+                  return False
+              
+              focal_playbook = focal_files[0]
+              noble_playbook = os.path.join(os.path.dirname(focal_playbook), "ubuntu-noble.yml")
+              
+              try:
+                  # Copy the file
+                  shutil.copy2(focal_playbook, noble_playbook)
+                  print(f"Copied {focal_playbook} to {noble_playbook}")
+                  
+                  # Update the playbook name inside the file
+                  with open(noble_playbook, 'r') as f:
+                      content = f.read()
+                  
+                  updated_content = content.replace('Ubuntu Focal 20.04', 'Ubuntu Noble 24.04')
+                  
+                  with open(noble_playbook, 'w') as f:
+                      f.write(updated_content)
+                  
+                  print(f"Updated playbook name in: {noble_playbook}")
+                  return True
+                  
+              except Exception as e:
+                  print(f"Error creating Noble playbook: {e}")
+                  return False
+          
+          def update_packer_playbook_references():
+              """Update Packer HCL files to use ubuntu-noble.yml."""
+              print("Updating Packer playbook references...")
+              
+              hcl_files = find_files_by_pattern("**/*.pkr.hcl")
+              
+              for filepath in hcl_files:
+                  try:
+                      with open(filepath, 'r') as f:
+                          content = f.read()
+                      
+                      updated_content = content.replace('ubuntu-focal.yml', 'ubuntu-noble.yml')
+                      
+                      if content != updated_content:
+                          with open(filepath, 'w') as f:
+                              f.write(updated_content)
+                          print(f"Updated playbook reference in: {filepath}")
+                          
+                  except Exception as e:
+                      print(f"Error updating {filepath}: {e}")
+          
+          def fix_python_tasks():
+              """Fix Python tasks for Ubuntu 24.04 compatibility."""
+              print("Fixing Python tasks for Ubuntu 24.04...")
+              
+              # Find Python role task files
+              python_task_patterns = ["**/roles/python/tasks/*.yml", "**/python/tasks/*.yml"]
+              python_files = []
+              
+              for pattern in python_task_patterns:
+                  python_files.extend(find_files_by_pattern(pattern))
+              
+              if not python_files:
+                  print("No Python task files found")
+                  return
+              
+              python_tasks_file = python_files[0]
+              print(f"Updating Python tasks in: {python_tasks_file}")
+              
+              try:
+                  with open(python_tasks_file, 'r') as f:
+                      content = f.read()
+                  
+                  # Replace the pip task with apt task for boto3/botocore
+                  pip_task_pattern = r'- name: Install botocore\s*\n\s*ansible\.builtin\.pip:\s*\n\s*name:\s*\n\s*- boto3\s*\n\s*- botocore'
+                  
+                  apt_replacement = '''- name: Install boto3 and botocore via system packages
+            ansible.builtin.apt:
+              name:
+                - python3-boto3
+                - python3-botocore
+              state: present'''
+                  
+                  content = re.sub(pip_task_pattern, apt_replacement, content, flags=re.MULTILINE)
+                  
+                  # Add pipx to the pip3 installation
+                  pip3_pattern = r'(- name: Install pip3\s*\n\s*ansible\.builtin\.apt:\s*\n\s*pkg:\s*\n\s*- python3-pip)'
+                  pip3_replacement = r'''\1
+                - pipx'''
+                  
+                  content = re.sub(pip3_pattern, pip3_replacement, content, flags=re.MULTILINE)
+                  
+                  # Add pipx ensurepath task after boto packages
+                  boto_pattern = r'(- name: Install boto3 and botocore via system packages\s*\n\s*ansible\.builtin\.apt:\s*\n\s*name:\s*\n\s*- python3-boto3\s*\n\s*- python3-botocore\s*\n\s*state: present)'
+                  
+                  pipx_task = r'''\1
+          
+          - name: Ensure pipx path is configured
+            ansible.builtin.shell: pipx ensurepath
+            become_user: "{{ ansible_user | default('ubuntu') }}"
+            ignore_errors: yes'''
+                  
+                  content = re.sub(boto_pattern, pipx_task, content, flags=re.MULTILINE)
+                  
+                  with open(python_tasks_file, 'w') as f:
+                      f.write(content)
+                  
+                  print(f"Updated Python tasks in: {python_tasks_file}")
+                  
+              except Exception as e:
+                  print(f"Error updating Python tasks: {e}")
+          
+          def main():
+              """Main function to orchestrate the update process."""
+              print("Starting Ubuntu 24.04 update process...")
+              
+              # Step 1: Update AMI filters
+              update_ami_filters()
+              
+              # Step 2: Create Noble playbook
+              if not create_noble_playbook():
+                  sys.exit(1)
+              
+              # Step 3: Update Packer references
+              update_packer_playbook_references()
+              
+              # Step 4: Fix Python tasks
+              fix_python_tasks()
+              
+              print("Ubuntu 24.04 update process completed successfully!")
+          
+          if __name__ == "__main__":
+              main()
+          EOF
+          
+          # Make the script executable and run it
+          chmod +x update_to_ubuntu24.py
+          python3 update_to_ubuntu24.py
+          rm update_to_ubuntu24.py
 
       - name: Initializing packer template
         run: |
