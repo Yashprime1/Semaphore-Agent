@@ -2,7 +2,6 @@ name: Build-Default-Semaphore-Agent-Ami
 
 run-name: build-default-semaphore-agent-ami-${{ github.ref_name }}-${{ github.run_number }}
 
-
 on:
   workflow_dispatch:
     inputs:
@@ -38,9 +37,17 @@ jobs:
         run: |
           # Update AMI filter to use Ubuntu Noble 24.04 instead of Focal 20.04
           find . -name "*.pkr.hcl" -o -name "*.json" | xargs sed -i 's/ubuntu-focal-20\.04/ubuntu-noble-24.04/g'
-          # Also update any hardcoded focal references
-          find . -name "*.pkr.hcl" -o -name "*.json" | xargs sed -i 's/focal/noble/g'
           
+          # Create ubuntu-noble.yml playbook by copying ubuntu-focal.yml
+          if [ -f "ansible/ubuntu-focal.yml" ]; then
+            cp ansible/ubuntu-focal.yml ansible/ubuntu-noble.yml
+            # Update the playbook name inside the file
+            sed -i 's/Ubuntu Focal 20\.04/Ubuntu Noble 24.04/g' ansible/ubuntu-noble.yml
+          fi
+          
+          # Update Packer HCL files to use the new playbook
+          find . -name "*.pkr.hcl" | xargs sed -i 's/ubuntu-focal\.yml/ubuntu-noble.yml/g'
+
       - name: Initializing packer template
         run: |
           make packer.init
