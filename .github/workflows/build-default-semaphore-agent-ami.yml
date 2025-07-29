@@ -34,6 +34,13 @@ jobs:
         with:
           version: 1.8.1
 
+      - name: Update version to OS 24
+        run: |
+          # Update AMI filter to use Ubuntu Noble 24.04 instead of Focal 20.04
+          find . -name "*.pkr.hcl" -o -name "*.json" | xargs sed -i 's/ubuntu-focal-20\.04/ubuntu-noble-24.04/g'
+          # Also update any hardcoded focal references
+          find . -name "*.pkr.hcl" -o -name "*.json" | xargs sed -i 's/focal/noble/g'
+          
       - name: Initializing packer template
         run: |
           make packer.init
