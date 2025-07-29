@@ -35,14 +35,28 @@ jobs:
 
       - name: Update version to OS 24
         run: |
+          # Debug: List files to see what's available
+          echo "Current directory contents:"
+          ls -la
+          echo "Looking for ansible directory:"
+          find . -name "ansible" -type d
+          echo "Looking for ubuntu-focal.yml:"
+          find . -name "ubuntu-focal.yml"
+          
           # Update AMI filter to use Ubuntu Noble 24.04 instead of Focal 20.04
           find . -name "*.pkr.hcl" -o -name "*.json" | xargs sed -i 's/ubuntu-focal-20\.04/ubuntu-noble-24.04/g'
           
           # Create ubuntu-noble.yml playbook by copying ubuntu-focal.yml
-          if [ -f "ansible/ubuntu-focal.yml" ]; then
-            cp ansible/ubuntu-focal.yml ansible/ubuntu-noble.yml
+          FOCAL_PLAYBOOK=$(find . -name "ubuntu-focal.yml" | head -1)
+          if [ -n "$FOCAL_PLAYBOOK" ]; then
+            NOBLE_PLAYBOOK=$(dirname "$FOCAL_PLAYBOOK")/ubuntu-noble.yml
+            echo "Copying $FOCAL_PLAYBOOK to $NOBLE_PLAYBOOK"
+            cp "$FOCAL_PLAYBOOK" "$NOBLE_PLAYBOOK"
             # Update the playbook name inside the file
-            sed -i 's/Ubuntu Focal 20\.04/Ubuntu Noble 24.04/g' ansible/ubuntu-noble.yml
+            sed -i 's/Ubuntu Focal 20\.04/Ubuntu Noble 24.04/g' "$NOBLE_PLAYBOOK"
+          else
+            echo "ERROR: ubuntu-focal.yml not found!"
+            exit 1
           fi
           
           # Update Packer HCL files to use the new playbook
