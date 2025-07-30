@@ -14,7 +14,6 @@ source "amazon-ebs" "with-tools" {
   region        = var.aws_region
   source_ami    = var.default_agent_ami
   ssh_username  = "ubuntu"
-  # Add other required fields (subnet_id, vpc_id, etc.) as needed
 }
 
 source "amazon-ebs" "with-tools-ultron" {
@@ -23,7 +22,6 @@ source "amazon-ebs" "with-tools-ultron" {
   region        = var.aws_region
   source_ami    = var.default_agent_ami
   ssh_username  = "ubuntu"
-  # Add other required fields (subnet_id, vpc_id, etc.) as needed
 }
 
 build {
