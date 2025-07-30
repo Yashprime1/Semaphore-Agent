@@ -1,9 +1,7 @@
 FROM semaphoreci/agent:v2.3.0
-
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-
 # Install all dependencies AWS CLI,build/install Erlang, install Semaphore CLI, and install Toolbox in one go.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
@@ -47,27 +45,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C ~/.toolbox --strip-components=1 \
     && bash ~/.toolbox/install-toolbox \
     && rm -rf /tmp/* /var/tmp/*
-
 ## Setting up User and Tools
-
 ENV USER=semaphore
 RUN mkdir -p /home/${USER}/.toolbox \
     && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
     && chown -R ${USER}:${USER} /home/${USER}/.toolbox \
-    && echo '#!/bin/bash' > /usr/local/bin/checkout \
-    && echo '. /home/semaphore/.toolbox/libcheckout' >> /usr/local/bin/checkout \
-    && echo 'checkout "$@"' >> /usr/local/bin/checkout \
-    && chmod +x /usr/local/bin/checkout \
-    && echo '#!/bin/bash' > /usr/local/bin/checksum \
-    && echo '. /home/semaphore/.toolbox/libchecksum' >> /usr/local/bin/checksum \
-    && echo 'checksum "$@"' >> /usr/local/bin/checksum \
-    && chmod +x /usr/local/bin/checksum \
+    && echo '. /home/semaphore/.toolbox/libcheckout' >> /home/${USER}/.bashrc \
+    && echo '. /home/semaphore/.toolbox/libchecksum' >> /home/${USER}/.bashrc \
+    && chown ${USER}:${USER} /home/${USER}/.bashrc \
     && ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
     && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
     && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
     && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
     && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results
-
 ## Final Configuration
 RUN mkdir -p /opt/semaphore \
     && chown ${USER}:${USER} /opt/semaphore
