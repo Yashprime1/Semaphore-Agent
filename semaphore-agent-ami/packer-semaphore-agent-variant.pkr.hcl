@@ -23,6 +23,7 @@ build {
 
   provisioner "shell" {
     script = "semaphore-agent-ami/with-tools/bootstrap.sh"
+    execute_command = "sudo bash '{{ .Path }}'"
   }
 }
 
@@ -32,8 +33,10 @@ build {
 
   provisioner "shell" {
     script = "semaphore-agent-ami/with-tools/bootstrap.sh"
+    execute_command = "sudo bash '{{ .Path }}'"
   }
   provisioner "shell" {
     script = "semaphore-agent-ami/ultron/bootstrap.sh"
+    execute_command = "sudo bash '{{ .Path }}'"
   }
 } 
