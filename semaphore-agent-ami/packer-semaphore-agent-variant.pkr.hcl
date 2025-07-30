@@ -8,8 +8,17 @@ variable "aws_region" {
   default = "eu-west-1"
 }
 
-source "amazon-ebs" "default" {
-  ami_name      = "semaphore-agent-variant-{{timestamp}}"
+source "amazon-ebs" "with-tools" {
+  ami_name      = "semaphore-agent-with-tools-{{timestamp}}"
+  instance_type = "t2.micro"
+  region        = var.aws_region
+  source_ami    = var.default_agent_ami
+  ssh_username  = "ubuntu"
+  # Add other required fields (subnet_id, vpc_id, etc.) as needed
+}
+
+source "amazon-ebs" "with-tools-ultron" {
+  ami_name      = "semaphore-agent-with-tools-ultron-{{timestamp}}"
   instance_type = "t2.micro"
   region        = var.aws_region
   source_ami    = var.default_agent_ami
@@ -19,7 +28,7 @@ source "amazon-ebs" "default" {
 
 build {
   name    = "with-tools"
-  sources = ["source.amazon-ebs.default"]
+  sources = ["source.amazon-ebs.with-tools"]
 
   provisioner "shell" {
     script = "semaphore-agent-ami/with-tools/bootstrap.sh"
@@ -29,7 +38,7 @@ build {
 
 build {
   name    = "with-tools-ultron"
-  sources = ["source.amazon-ebs.default"]
+  sources = ["source.amazon-ebs.with-tools-ultron"]
 
   provisioner "shell" {
     script = "semaphore-agent-ami/with-tools/bootstrap.sh"
