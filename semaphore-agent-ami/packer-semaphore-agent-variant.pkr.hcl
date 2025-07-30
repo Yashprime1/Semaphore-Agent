@@ -1,6 +1,11 @@
 variable "default_agent_ami" {
-  type    = string
+  type        = string
   description = "The AMI ID of the default agent to use as the base image."
+}
+
+variable "aws_region" {
+  type    = string
+  default = "eu-west-1"
 }
 
 source "amazon-ebs" "default" {
@@ -12,21 +17,12 @@ source "amazon-ebs" "default" {
   # Add other required fields (subnet_id, vpc_id, etc.) as needed
 }
 
-variable "aws_region" {
-  type    = string
-  default = "eu-west-1"
-}
-
 build {
   name    = "with-tools"
   sources = ["source.amazon-ebs.default"]
 
   provisioner "shell" {
-    script = "semaphore-agent-ami/with-tools-ultron-bootstrap.sh"
-    environment_vars = [
-      "WITH_TOOLS=true",
-      "ULTRON=false"
-    ]
+    script = "semaphore-agent-ami/with-tools/bootstrap.sh"
   }
 }
 
@@ -35,10 +31,9 @@ build {
   sources = ["source.amazon-ebs.default"]
 
   provisioner "shell" {
-    script = "semaphore-agent-ami/with-tools-ultron-bootstrap.sh"
-    environment_vars = [
-      "WITH_TOOLS=true",
-      "ULTRON=true"
-    ]
+    script = "semaphore-agent-ami/with-tools/bootstrap.sh"
+  }
+  provisioner "shell" {
+    script = "semaphore-agent-ami/ultron/bootstrap.sh"
   }
 } 
