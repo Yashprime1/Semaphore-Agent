@@ -55,14 +55,11 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
     && chown -R ${USER}:${USER} /home/${USER}/.toolbox \
     && echo '#!/bin/bash' > /usr/local/bin/checkout \
-    && echo 'source /home/semaphore/.toolbox/libcheckout' >> /usr/local/bin/checkout \
+    && echo '. /home/semaphore/.toolbox/libcheckout' >> /usr/local/bin/checkout \
     && echo 'checkout "$@"' >> /usr/local/bin/checkout \
-    && echo 'pwd' >> /usr/local/bin/checkout \
-    && echo 'ls' >> /usr/local/bin/checkout \
-    && echo 'cd "$SEMAPHORE_GIT_REPO_NAME"' >> /usr/local/bin/checkout \
     && chmod +x /usr/local/bin/checkout \
     && echo '#!/bin/bash' > /usr/local/bin/checksum \
-    && echo 'source /home/semaphore/.toolbox/libchecksum' >> /usr/local/bin/checksum \
+    && echo '. /home/semaphore/.toolbox/libchecksum' >> /usr/local/bin/checksum \
     && echo 'checksum "$@"' >> /usr/local/bin/checksum \
     && chmod +x /usr/local/bin/checksum \
     && ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
@@ -72,16 +69,12 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results
 
 ## Final Configuration
-
 RUN mkdir -p /opt/semaphore \
     && chown ${USER}:${USER} /opt/semaphore
-
 COPY shutdown.sh /opt/semaphore/shutdown
 COPY entrypoint.sh /opt/semaphore/entrypoint.sh
-
 RUN chmod +x /opt/semaphore/shutdown \
     && chmod +x /opt/semaphore/entrypoint.sh \
     && chown ${USER}:${USER} /opt/semaphore/shutdown \
     && chown ${USER}:${USER} /opt/semaphore/entrypoint.sh
-
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
