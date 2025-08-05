@@ -23,14 +23,48 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Build Erlang/OTP
+# Build Erlang/OTP with minimal features and cleanup
 RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz \
     && cd otp_src_26.2.5.2/ \
-    && ./configure --disable-debug --disable-hipe --disable-javac --without-javac \
+    && ./configure \
+        --disable-debug \
+        --disable-hipe \
+        --disable-javac \
+        --without-javac \
+        --without-wx \
+        --without-observer \
+        --without-debugger \
+        --without-et \
+        --without-gs \
+        --without-ic \
+        --without-orber \
+        --without-cosTransactions \
+        --without-cosEvent \
+        --without-cosTime \
+        --without-cosNotification \
+        --without-cosProperty \
+        --without-cosFileTransfer \
+        --without-cosEventDomain \
+        --without-diameter \
+        --without-eldap \
+        --without-erl_docgen \
+        --without-ftp \
+        --without-jinterface \
+        --without-megaco \
+        --without-odbc \
+        --without-reltool \
+        --without-ssh \
+        --without-tftp \
+        --without-typer \
     && make -j$(nproc) \
     && make install \
     && cd .. \
-    && rm -rf otp_src_26.2.5.2/
+    && rm -rf otp_src_26.2.5.2/ \
+    && find /usr/local/lib/erlang -name "*.beam" -exec strip --strip-debug {} \; 2>/dev/null || true \
+    && find /usr/local/lib/erlang -name "*.so" -exec strip {} \; 2>/dev/null || true \
+    && rm -rf /usr/local/lib/erlang/lib/*/examples \
+    && rm -rf /usr/local/lib/erlang/lib/*/doc \
+    && rm -rf /usr/local/lib/erlang/lib/*/src
 
 # Download stage for external tools
 FROM alpine:latest AS downloader
@@ -48,88 +82,69 @@ RUN curl -L https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Lin
 RUN mkdir -p /toolbox \
     && curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /toolbox --strip-components=1
 
-# Final runtime stage
+# Final runtime stage - keep original base
 FROM semaphoreci/agent:v2.3.0
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 ENV USER=semaphore
 
-# First try to install packages, with fallback for different package names
-RUN apt-get update && \
-    (apt-get install -y --no-install-recommends \
-        curl \
-        unzip \
-        jq \
-        git \
-        libncurses5 \
-        libssl1.1 \
-        openssh-client \
-        ca-certificates \
-        libwxgtk3.0-gtk3-0 \
-        libgl1-mesa-glx \
-        libglu1-mesa \
-        libpng16-16 \
-        libssh-4 \
-        unixodbc \
-        libxml2-utils || \
-    apt-get install -y --no-install-recommends \
-        curl \
-        unzip \
-        jq \
-        git \
-        libncurses5 \
-        libssl1.1 \
-        openssh-client \
-        ca-certificates \
-        libwxbase3.0-0v5 \
-        libwxgtk3.0-0v5 \
-        libgl1-mesa-glx \
-        libglu1-mesa \
-        libpng16-16 \
-        libssh-gcrypt-4 \
-        unixodbc \
-        libxml2-utils) \
-    && rm -rf /var/lib/apt/lists/*
+# Install only essential runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    libssl1.1 \
+    libncurses5 \
+    libtinfo5 \
+    zlib1g \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && rm -rf /var/cache/apt/*
 
-# Copy Erlang/OTP from builder stage
-COPY --from=erlang-builder /usr/local/lib/erlang /usr/local/lib/erlang
-COPY --from=erlang-builder /usr/local/bin/erl /usr/local/bin/erl
-COPY --from=erlang-builder /usr/local/bin/erlc /usr/local/bin/erlc
-COPY --from=erlang-builder /usr/local/bin/escript /usr/local/bin/escript
-COPY --from=erlang-builder /usr/local/bin/run_erl /usr/local/bin/run_erl
-COPY --from=erlang-builder /usr/local/bin/to_erl /usr/local/bin/to_erl
-COPY --from=erlang-builder /usr/local/bin/dialyzer /usr/local/bin/dialyzer
-COPY --from=erlang-builder /usr/local/bin/typer /usr/local/bin/typer
-COPY --from=erlang-builder /usr/local/bin/ct_run /usr/local/bin/ct_run
+# Copy only essential Erlang/OTP components
+COPY --from=erlang-builder /usr/local/lib/erlang/bin /usr/local/lib/erlang/bin
+COPY --from=erlang-builder /usr/local/lib/erlang/erts-* /usr/local/lib/erlang/erts-13.2.2.3
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/kernel-* /usr/local/lib/erlang/lib/kernel-9.2.3
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/stdlib-* /usr/local/lib/erlang/lib/stdlib-5.2.3
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/sasl-* /usr/local/lib/erlang/lib/sasl-4.2.1
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/crypto-* /usr/local/lib/erlang/lib/crypto-5.4.1
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/ssl-* /usr/local/lib/erlang/lib/ssl-11.2.2
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/public_key-* /usr/local/lib/erlang/lib/public_key-1.15.1
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/asn1-* /usr/local/lib/erlang/lib/asn1-5.2.1
+COPY --from=erlang-builder /usr/local/lib/erlang/releases /usr/local/lib/erlang/releases
 
-# Install AWS CLI from downloader stage
+# Create essential Erlang symlinks
+RUN ln -sf /usr/local/lib/erlang/bin/erl /usr/local/bin/erl \
+    && ln -sf /usr/local/lib/erlang/bin/erlc /usr/local/bin/erlc \
+    && ln -sf /usr/local/lib/erlang/bin/escript /usr/local/bin/escript
+
+# Install AWS CLI (minimal installation)
 COPY --from=downloader /aws /tmp/aws
-RUN /tmp/aws/install && rm -rf /tmp/aws
+RUN /tmp/aws/install --install-dir /usr/local/aws-cli --bin-dir /usr/local/bin \
+    && rm -rf /tmp/aws \
+    && rm -rf /usr/local/aws-cli/v2/*/dist/awscli/examples
 
-# Copy Semaphore CLI from downloader stage
+# Copy Semaphore CLI
 COPY --from=downloader /sem /usr/local/bin/sem
 RUN chmod +x /usr/local/bin/sem
 
-# Copy and install Toolbox from downloader stage
-# First copy to root directory where the install script expects it
+# Install Toolbox with minimal setup
 COPY --from=downloader /toolbox /root/.toolbox
-RUN bash /root/.toolbox/install-toolbox
-
-# Now copy to semaphore user directory and set up permissions
-RUN mkdir -p /home/${USER}/.toolbox \
+RUN bash /root/.toolbox/install-toolbox \
+    && mkdir -p /home/${USER}/.toolbox \
     && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
-    && chown -R ${USER}:${USER} /home/${USER}/.toolbox
+    && chown -R ${USER}:${USER} /home/${USER}/.toolbox \
+    && rm -rf /root/.toolbox
 
-# Setting up User and Tools
+# Create minimal tool symlinks
+RUN ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
+    && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
+    && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry
+
+# Setup user environment
 RUN echo '. /home/semaphore/.toolbox/libcheckout' >> /home/${USER}/.bashrc \
     && echo '. /home/semaphore/.toolbox/libchecksum' >> /home/${USER}/.bashrc \
-    && chown ${USER}:${USER} /home/${USER}/.bashrc \
-    && ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
-    && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
-    && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
-    && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
-    && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results
+    && chown ${USER}:${USER} /home/${USER}/.bashrc
 
 # Final Configuration
 RUN mkdir -p /opt/semaphore \
@@ -142,7 +157,7 @@ RUN chmod +x /opt/semaphore/shutdown \
     && chown ${USER}:${USER} /opt/semaphore/shutdown \
     && chown ${USER}:${USER} /opt/semaphore/entrypoint.sh
 
-# Clean up any remaining temporary files
-RUN rm -rf /tmp/* /var/tmp/*
+# Final cleanup
+RUN rm -rf /tmp/* /var/tmp/* /var/log/* /var/cache/* /usr/share/doc/* /usr/share/man/*
 
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
