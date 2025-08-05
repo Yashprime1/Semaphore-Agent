@@ -31,11 +31,23 @@ jobs:
           platforms: linux/amd64
       
 
-      - name: Get image size
+      - name: Get image size (after push and pull)
         run: |
-          IMAGE_TAG="semaphore-agent:${{ github.ref_name }}-${{ github.run_number }}"
-          IMAGE_SIZE=$(docker image inspect $IMAGE_TAG --format='{{.Size}}')
-          IMAGE_SIZE_MB=$((IMAGE_SIZE / 1024 / 1024))
-          echo "Image size: ${IMAGE_SIZE_MB} MB (${IMAGE_SIZE} bytes)"
-          echo "IMAGE_SIZE=${IMAGE_SIZE}" >> $GITHUB_OUTPUT
+          IMAGE_TAG="artifactory.clevertap.net/clevertap/semaphore-agent:${{ github.ref_name }}-${{ github.run_number }}"
+          
+          # The login is already done by the previous step, so we can directly pull.
+          docker pull $IMAGE_TAG
+          
+          # Inspect the local image to get its size
+          IMAGE_SIZE_BYTES=$(docker image inspect $IMAGE_TAG --format='{{.Size}}')
+          
+          if [ -z "$IMAGE_SIZE_BYTES" ]; then
+            echo "Error: Could not retrieve image size. Check if the image exists and credentials are correct."
+            exit 1
+          fi
+
+          IMAGE_SIZE_MB=$((IMAGE_SIZE_BYTES / 1024 / 1024))
+          
+          echo "Image size: ${IMAGE_SIZE_MB} MB (${IMAGE_SIZE_BYTES} bytes)"
+          echo "IMAGE_SIZE=${IMAGE_SIZE_BYTES}" >> $GITHUB_OUTPUT
           echo "IMAGE_SIZE_MB=${IMAGE_SIZE_MB}" >> $GITHUB_OUTPUT
