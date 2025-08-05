@@ -71,7 +71,8 @@ ENV TZ=UTC
 ENV USER=semaphore
 ENV HOME=/home/${USER}
 
-# This is the single, monolithic RUN command for maximum size reduction
+# Install essential dependencies, download and install all tools.
+# This is a single layer for maximum size optimization.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
@@ -92,21 +93,22 @@ RUN apt-get update && \
     mkdir -p ${HOME}/.toolbox && \
     curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C ${HOME}/.toolbox --strip-components=1 && \
     find ${HOME}/.toolbox -type f ! -name "cache" ! -name "artifact" ! -name "retry" ! -name "libcheckout" ! -name "libchecksum" ! -name "install-toolbox" -delete && \
-    # Cleanup all the temporary files and caches
+    # Cleanup all temporary files and caches
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* /usr/local/aws-cli/v2/*/dist/awscli/examples /usr/local/aws-cli/v2/*/dist/awscli/topics && \
     find /usr/local/aws-cli -name "*.pyc" -delete && \
     find /usr/local/aws-cli -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null && \
-    # Create required directories
+    # Create required directories and set ownership and permissions
     mkdir -p /opt/semaphore && \
-    # Set permissions for all necessary files
-    chown -R ${USER}:${USER} /usr/local/aws-cli /usr/local/bin/sem /home/${USER}/.toolbox /opt/semaphore && \
-    # Set execute permissions for the Semaphore CLI binary
+    chown -R ${USER}:${USER} /usr/local/aws-cli /usr/local/bin/sem ${HOME}/.toolbox /opt/semaphore && \
+    # Set execute permissions for all necessary binaries and scripts
     chmod +x /usr/local/bin/sem && \
-    # Setup symbolic links and environment for the user
+    chmod +x ${HOME}/.toolbox/cache ${HOME}/.toolbox/artifact ${HOME}/.toolbox/retry && \
+    # Setup symbolic links
     ln -sf ${HOME}/.toolbox/cache /usr/local/bin/cache && \
     ln -sf ${HOME}/.toolbox/artifact /usr/local/bin/artifact && \
     ln -sf ${HOME}/.toolbox/retry /usr/local/bin/retry && \
+    # Add toolbox functions to .bashrc
     echo '. /home/semaphore/.toolbox/libcheckout' >> ${HOME}/.bashrc && \
     echo '. /home/semaphore/.toolbox/libchecksum' >> ${HOME}/.bashrc
 
@@ -116,7 +118,7 @@ COPY --from=erlang-builder /usr/local/bin/erl /usr/local/bin/erl
 COPY --from=erlang-builder /usr/local/bin/erlc /usr/local/bin/erlc
 COPY --from=erlang-builder /usr/local/bin/escript /usr/local/bin/escript
 
-# Copy essential scripts
+# Copy essential scripts and set permissions
 COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
 COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
