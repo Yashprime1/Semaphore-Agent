@@ -2,7 +2,7 @@
 FROM semaphoreci/agent:v2.3.0 as erlang-builder
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-
+USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     build-essential \
