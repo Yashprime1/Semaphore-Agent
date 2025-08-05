@@ -112,8 +112,14 @@ COPY --from=downloader /sem /usr/local/bin/sem
 RUN chmod +x /usr/local/bin/sem
 
 # Copy and install Toolbox from downloader stage
-COPY --from=downloader /toolbox /home/${USER}/.toolbox
-RUN bash /home/${USER}/.toolbox/install-toolbox
+# First copy to root directory where the install script expects it
+COPY --from=downloader /toolbox /root/.toolbox
+RUN bash /root/.toolbox/install-toolbox
+
+# Now copy to semaphore user directory and set up permissions
+RUN mkdir -p /home/${USER}/.toolbox \
+    && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
+    && chown -R ${USER}:${USER} /home/${USER}/.toolbox
 
 # Setting up User and Tools
 RUN echo '. /home/semaphore/.toolbox/libcheckout' >> /home/${USER}/.bashrc \
@@ -123,8 +129,7 @@ RUN echo '. /home/semaphore/.toolbox/libcheckout' >> /home/${USER}/.bashrc \
     && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
     && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
     && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
-    && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results \
-    && chown -R ${USER}:${USER} /home/${USER}/.toolbox
+    && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results
 
 # Final Configuration
 RUN mkdir -p /opt/semaphore \
