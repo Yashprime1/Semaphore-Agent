@@ -78,6 +78,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
     git \
+    openssh-client \
     ca-certificates \
     libssl1.1 \
     libncurses5 \
