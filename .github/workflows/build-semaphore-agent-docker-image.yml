@@ -29,3 +29,13 @@ jobs:
           push: true
           tags: artifactory.clevertap.net/clevertap/semaphore-agent:${{ github.ref_name }}-${{ github.run_number }}
           platforms: linux/amd64
+      
+
+      - name: Get image size
+        run: |
+          IMAGE_TAG="semaphore-agent:${{ github.ref_name }}-${{ github.run_number }}"
+          IMAGE_SIZE=$(docker image inspect $IMAGE_TAG --format='{{.Size}}')
+          IMAGE_SIZE_MB=$((IMAGE_SIZE / 1024 / 1024))
+          echo "Image size: ${IMAGE_SIZE_MB} MB (${IMAGE_SIZE} bytes)"
+          echo "IMAGE_SIZE=${IMAGE_SIZE}" >> $GITHUB_OUTPUT
+          echo "IMAGE_SIZE_MB=${IMAGE_SIZE_MB}" >> $GITHUB_OUTPUT
