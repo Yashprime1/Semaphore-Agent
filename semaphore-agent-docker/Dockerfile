@@ -2,9 +2,16 @@
 FROM alpine:3.18 AS erlang-builder
 
 # Install build dependencies in a single step
-RUN apk add --no-cache build-base curl autoconf ncurses-dev openssl-dev zlib-dev perl
+RUN apk add --no-cache \
+    build-base \
+    curl \
+    autoconf \
+    ncurses-dev \
+    openssl-dev \
+    zlib-dev \
+    perl
 
-# Build a minimal Erlang/OTP without unnecessary components
+# Build a minimal Erlang/OTP
 RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz \
     && cd otp_src_26.2.5.2/ \
     && ./configure \
@@ -54,22 +61,7 @@ RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src
     && cd .. \
     && rm -rf otp_src_26.2.5.2/
 
-# Stage 2: Download Semaphore and AWS CLI tools
-FROM alpine:3.18 AS downloader
-
-# Download and extract all tools in a single step
-RUN apk add --no-cache curl unzip && \
-    # Semaphore CLI
-    curl -L https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz && \
-    # Semaphore Toolbox
-    mkdir -p /toolbox && \
-    curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /toolbox --strip-components=1 && \
-    # AWS CLI v2
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    rm awscliv2.zip
-
-# Stage 3: The final image
+# Stage 2: The final image
 FROM semaphoreci/agent:v2.3.0
 
 # Set up user and timezone
@@ -78,7 +70,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 ENV USER=semaphore
 
-# Install essential runtime dependencies
+# Install essential runtime dependencies and clean up apt cache in a single layer
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
@@ -87,6 +79,7 @@ RUN apt-get update && \
     libncurses5 \
     libtinfo5 \
     zlib1g && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # Copy minimal Erlang installation
@@ -95,18 +88,25 @@ COPY --from=erlang-builder /usr/local/bin/erl /usr/local/bin/erl
 COPY --from=erlang-builder /usr/local/bin/erlc /usr/local/bin/erlc
 COPY --from=erlang-builder /usr/local/bin/escript /usr/local/bin/escript
 
-# Install and clean AWS CLI
-COPY --from=downloader /aws /tmp/aws
-RUN /tmp/aws/install --install-dir /usr/local/aws-cli --bin-dir /usr/local/bin && \
-    rm -rf /tmp/aws /usr/local/aws-cli/v2/*/dist/awscli/examples /usr/local/aws-cli/v2/*/dist/awscli/topics && \
+# Download, install, and clean AWS CLI, Semaphore CLI, and Toolbox in a single layer
+RUN mkdir -p /tmp/downloads && \
+    # Download AWS CLI v2
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/downloads/awscliv2.zip" && \
+    unzip /tmp/downloads/awscliv2.zip -d /tmp/downloads/ && \
+    /tmp/downloads/aws/install --install-dir /usr/local/aws-cli --bin-dir /usr/local/bin && \
+    rm -rf /tmp/downloads/aws /usr/local/aws-cli/v2/*/dist/awscli/examples /usr/local/aws-cli/v2/*/dist/awscli/topics && \
     find /usr/local/aws-cli -name "*.pyc" -delete && \
-    find /usr/local/aws-cli -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null
+    # Download and install Semaphore CLI
+    curl -L https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin/ && \
+    chmod +x /usr/local/bin/sem && \
+    # Download and install minimal Toolbox
+    mkdir -p /home/${USER}/.toolbox && \
+    curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /home/${USER}/.toolbox --strip-components=1 && \
+    find /home/${USER}/.toolbox -type f ! -name "cache" ! -name "artifact" ! -name "retry" ! -name "libcheckout" ! -name "libchecksum" ! -name "install-toolbox" -delete && \
+    # Final cleanup of temp downloads
+    rm -rf /tmp/downloads /tmp/* /var/tmp/*
 
-# Install Semaphore CLI and Toolbox
-COPY --from=downloader /sem /usr/local/bin/sem
-COPY --from=downloader /toolbox /home/${USER}/.toolbox
-
-# Set up user environment
+# Setup user environment
 RUN chown -R ${USER}:${USER} /home/${USER}/.toolbox && \
     ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache && \
     ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact && \
@@ -123,9 +123,9 @@ RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh && \
     chown ${USER}:${USER} /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
 # Final cleanup
-RUN rm -rf /tmp/* /var/tmp/* /usr/share/doc/* /usr/share/man/* /usr/share/info/* && \
-    find /usr/local -name "*.a" -delete -o -name "*.la" -delete
+RUN find /usr/local -name "*.a" -delete -o -name "*.la" -delete
 
 USER ${USER}
 WORKDIR /home/${USER}
+
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
