@@ -1,0 +1,35 @@
+name: Build-Semaphore-Agent-Docker
+
+run-name: build-semaphore-agent-docker-${{ github.ref_name }}-${{ github.run_number }}
+
+on:
+  workflow_dispatch:
+  
+jobs:
+  build-default-semaphore-agent-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        id: build
+        with:
+          context: ./semaphore-agent-docker
+          push: false
+          tags: semaphore-agent:${{ github.ref_name }}-${{ github.run_number }}
+          platforms: linux/amd64
+          load: true
+
+      - name: Get image size
+        run: |
+          IMAGE_TAG="semaphore-agent:${{ github.ref_name }}-${{ github.run_number }}"
+          IMAGE_SIZE=$(docker image inspect $IMAGE_TAG --format='{{.Size}}')
+          IMAGE_SIZE_MB=$((IMAGE_SIZE / 1024 / 1024))
+          echo "Image size: ${IMAGE_SIZE_MB} MB (${IMAGE_SIZE} bytes)"
+          echo "IMAGE_SIZE=${IMAGE_SIZE}" >> $GITHUB_OUTPUT
+          echo "IMAGE_SIZE_MB=${IMAGE_SIZE_MB}" >> $GITHUB_OUTPUT
