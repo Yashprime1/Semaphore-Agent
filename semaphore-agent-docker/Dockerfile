@@ -1,4 +1,4 @@
-# Stage 1: Build a minimal Erlang/OTP from source
+# Stage 1: Build a minimal Erlang/OTP from source on Alpine
 FROM alpine:3.18 AS erlang-builder
 
 # Install build dependencies in a single step
@@ -70,7 +70,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 ENV USER=semaphore
 
-# Install essential runtime dependencies and clean up apt cache in a single layer
+# Install essential runtime dependencies, including unzip, and clean up apt cache
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
@@ -78,7 +78,8 @@ RUN apt-get update && \
     libssl1.1 \
     libncurses5 \
     libtinfo5 \
-    zlib1g && \
+    zlib1g \
+    unzip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
@@ -88,29 +89,28 @@ COPY --from=erlang-builder /usr/local/bin/erl /usr/local/bin/erl
 COPY --from=erlang-builder /usr/local/bin/erlc /usr/local/bin/erlc
 COPY --from=erlang-builder /usr/local/bin/escript /usr/local/bin/escript
 
-# Download, install, and clean AWS CLI, Semaphore CLI, and Toolbox in a single layer
+# Download, install, and clean AWS CLI, Semaphore CLI, and Toolbox
 RUN mkdir -p /tmp/downloads && \
-    # Download AWS CLI v2
+    # AWS CLI v2
     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/downloads/awscliv2.zip" && \
     unzip /tmp/downloads/awscliv2.zip -d /tmp/downloads/ && \
     /tmp/downloads/aws/install --install-dir /usr/local/aws-cli --bin-dir /usr/local/bin && \
     rm -rf /tmp/downloads/aws /usr/local/aws-cli/v2/*/dist/awscli/examples /usr/local/aws-cli/v2/*/dist/awscli/topics && \
     find /usr/local/aws-cli -name "*.pyc" -delete && \
-    # Download and install Semaphore CLI
+    # Semaphore CLI
     curl -L https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin/ && \
-    chmod +x /usr/local/bin/sem && \
-    # Download and install minimal Toolbox
+    # Semaphore Toolbox
     mkdir -p /home/${USER}/.toolbox && \
     curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /home/${USER}/.toolbox --strip-components=1 && \
-    find /home/${USER}/.toolbox -type f ! -name "cache" ! -name "artifact" ! -name "retry" ! -name "libcheckout" ! -name "libchecksum" ! -name "install-toolbox" -delete && \
-    # Final cleanup of temp downloads
-    rm -rf /tmp/downloads /tmp/* /var/tmp/*
+    find /home/${USER}/.toolbox -type f ! -name "cache" ! -name "artifact" ! -name "retry" ! -name "libcheckout" ! -name "libchecksum" ! -name "install-toolbox" -delete
 
-# Setup user environment
-RUN chown -R ${USER}:${USER} /home/${USER}/.toolbox && \
+# Set permissions and links
+RUN chmod +x /usr/local/bin/sem && \
+    chown -R ${USER}:${USER} /home/${USER}/.toolbox && \
     ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache && \
     ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact && \
     ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry && \
+    # Setup user environment
     echo '. /home/semaphore/.toolbox/libcheckout' >> /home/${USER}/.bashrc && \
     echo '. /home/semaphore/.toolbox/libchecksum' >> /home/${USER}/.bashrc && \
     mkdir -p /opt/semaphore && \
@@ -123,7 +123,8 @@ RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh && \
     chown ${USER}:${USER} /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
 # Final cleanup
-RUN find /usr/local -name "*.a" -delete -o -name "*.la" -delete
+RUN find /usr/local -name "*.a" -delete -o -name "*.la" -delete && \
+    rm -rf /tmp/* /var/tmp/*
 
 USER ${USER}
 WORKDIR /home/${USER}
