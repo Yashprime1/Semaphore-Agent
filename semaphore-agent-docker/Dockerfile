@@ -50,7 +50,7 @@ RUN mkdir -p /toolbox \
 FROM semaphoreci/agent:v2.3.0
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-ENV USER=semaphore
+USER root
 
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -89,6 +89,9 @@ RUN /tmp/aws-install && rm -rf /tmp/aws-install
 # Copy Semaphore CLI from downloader stage
 COPY --from=downloader /sem /usr/local/bin/sem
 RUN chmod +x /usr/local/bin/sem
+
+USER semaphore
+ENV USER=semaphore
 
 # Copy and install Toolbox from downloader stage
 COPY --from=downloader /toolbox /home/${USER}/.toolbox
