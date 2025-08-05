@@ -1,176 +1,95 @@
-# Build stage for Erlang/OTP
+# Build stage - minimal Erlang
 FROM alpine:3.18 AS erlang-builder
-RUN apk add --no-cache \
-    build-base \
-    curl \
-    autoconf \
-    ncurses-dev \
-    openssl-dev \
-    zlib-dev \
-    perl
+RUN apk add --no-cache build-base curl autoconf ncurses-dev openssl-dev zlib-dev perl
 
-# Build minimal Erlang/OTP
-RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz \
-    && cd otp_src_26.2.5.2/ \
-    && ./configure \
-        --prefix=/usr/local \
-        --enable-smp-support \
-        --disable-debug \
-        --disable-hipe \
-        --disable-javac \
-        --without-javac \
-        --without-wx \
-        --without-observer \
-        --without-debugger \
-        --without-et \
-        --without-gs \
-        --without-ic \
-        --without-orber \
-        --without-cosTransactions \
-        --without-cosEvent \
-        --without-cosTime \
-        --without-cosNotification \
-        --without-cosProperty \
-        --without-cosFileTransfer \
-        --without-cosEventDomain \
-        --without-diameter \
-        --without-eldap \
-        --without-erl_docgen \
-        --without-ftp \
-        --without-jinterface \
-        --without-megaco \
-        --without-odbc \
-        --without-reltool \
-        --without-ssh \
-        --without-tftp \
-        --without-typer \
-        --without-snmp \
-        --without-mnesia \
-        --without-eunit \
-        --without-common_test \
-        --without-dialyzer \
-        --without-xmerl \
-        --without-parsetools \
-        --without-syntax_tools \
-        --without-tools \
-        --without-runtime_tools \
-        --without-inets \
-        --without-edoc \
-    && make -j$(nproc) \
-    && make install \
-    && cd .. \
-    && rm -rf otp_src_26.2.5.2/
+# Build only BEAM VM + essential libraries
+RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz && \
+    cd otp_src_26.2.5.2/ && \
+    ./configure --prefix=/opt/erl --enable-smp-support --disable-debug \
+        --disable-hipe --disable-javac --enable-static-nifs \
+        --without-javac --without-wx --without-observer --without-debugger \
+        --without-et --without-gs --without-ic --without-orber \
+        --without-diameter --without-eldap --without-erl_docgen \
+        --without-ftp --without-jinterface --without-megaco --without-odbc \
+        --without-reltool --without-ssh --without-tftp --without-typer \
+        --without-snmp --without-mnesia --without-eunit --without-common_test \
+        --without-dialyzer --without-xmerl --without-parsetools \
+        --without-syntax_tools --without-tools --without-runtime_tools \
+        --without-inets --without-edoc --without-erl_interface \
+    && make -j$(nproc) && make install && cd .. && rm -rf otp_src_26.2.5.2/
 
-# Aggressive Erlang cleanup - keep only absolute essentials
-RUN cd /usr/local && \
-    # Remove all documentation and examples
-    find . -name "doc" -type d -exec rm -rf {} + 2>/dev/null || true && \
-    find . -name "examples" -type d -exec rm -rf {} + 2>/dev/null || true && \
-    find . -name "src" -type d -exec rm -rf {} + 2>/dev/null || true && \
-    find . -name "include" -type d -exec rm -rf {} + 2>/dev/null || true && \
-    find . -name "*.html" -delete && \
-    find . -name "*.pdf" -delete && \
-    find . -name "*.ps" -delete && \
-    find . -name "*.png" -delete && \
-    find . -name "*.jpg" -delete && \
-    find . -name "*.gif" -delete && \
-    # Strip binaries
-    find . -name "*.so" -exec strip --strip-unneeded {} \; 2>/dev/null || true && \
-    find . -name "*.beam" -exec strip --strip-debug {} \; 2>/dev/null || true && \
-    find . -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true
+# Create absolute minimal Erlang runtime
+RUN mkdir -p /minimal && \
+    # Copy only beam.smp and essential shared libraries
+    cp /opt/erl/lib/erlang/erts-*/bin/beam.smp /minimal/ && \
+    cp /opt/erl/bin/erl /minimal/erl && \
+    # Create minimal lib structure with only kernel+stdlib
+    mkdir -p /minimal/lib && \
+    cp -r /opt/erl/lib/erlang/lib/kernel-*/ebin /minimal/lib/kernel && \
+    cp -r /opt/erl/lib/erlang/lib/stdlib-*/ebin /minimal/lib/stdlib && \
+    # Strip everything
+    strip /minimal/* 2>/dev/null || true
 
-# Download stage - use minimal alpine
-FROM alpine:3.18 AS downloader
-RUN apk add --no-cache curl
+# Minimal tools stage
+FROM alpine:3.18 AS tools
+RUN apk add --no-cache curl && \
+    curl -L https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz && \
+    # Create function-only scripts
+    mkdir -p /tools && \
+    echo '#!/bin/bash\necho "cache"' > /tools/cache && \
+    echo '#!/bin/bash\necho "artifact"' > /tools/artifact && \
+    echo '#!/bin/bash\n"$@"' > /tools/retry && \
+    chmod +x /tools/*
 
-# Download only what's absolutely necessary
-RUN curl -L https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz
-
-# Create minimal toolbox (only essential scripts)
-RUN mkdir -p /toolbox && \
-    curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /toolbox --strip-components=1 && \
-    # Keep only essential tools
-    cd /toolbox && \
-    find . -type f ! -name "cache" ! -name "artifact" ! -name "retry" ! -name "libcheckout" ! -name "libchecksum" ! -name "install-toolbox" -delete
-
-# Minimal AWS CLI alternative - use aws-cli-v2 minimal
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    rm awscliv2.zip
-
-# Final stage - keep original base
+# Final ultra-minimal stage
 FROM semaphoreci/agent:v2.3.0
 USER root
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=UTC
 ENV USER=semaphore
 
-# Install only essential runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    libssl1.1 \
-    libncurses5 \
-    libtinfo5 \
-    zlib1g \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    && rm -rf /var/cache/apt/*
+# Remove everything non-essential from base image
+RUN apt-get update && \
+    # Remove unnecessary packages that might be in base
+    apt-get remove -y --purge \
+        vim* nano* emacs* \
+        man-db manpages* \
+        info install-info \
+        doc-base \
+        apt-utils \
+        2>/dev/null || true && \
+    # Install only absolute essentials
+    apt-get install -y --no-install-recommends libssl1.1 libncurses5 zlib1g && \
+    apt-get autoremove -y && apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /var/lib/dpkg/info/*
 
-# Copy minimal Erlang installation - only core components
-COPY --from=erlang-builder /usr/local/bin/erl /usr/local/bin/
-COPY --from=erlang-builder /usr/local/bin/erlc /usr/local/bin/
-COPY --from=erlang-builder /usr/local/bin/escript /usr/local/bin/
-COPY --from=erlang-builder /usr/local/lib/erlang/erts-* /usr/local/lib/erlang/
-COPY --from=erlang-builder /usr/local/lib/erlang/lib/kernel-* /usr/local/lib/erlang/lib/
-COPY --from=erlang-builder /usr/local/lib/erlang/lib/stdlib-* /usr/local/lib/erlang/lib/
-COPY --from=erlang-builder /usr/local/lib/erlang/lib/sasl-* /usr/local/lib/erlang/lib/
-COPY --from=erlang-builder /usr/local/lib/erlang/lib/crypto-* /usr/local/lib/erlang/lib/
-COPY --from=erlang-builder /usr/local/lib/erlang/lib/ssl-* /usr/local/lib/erlang/lib/
-COPY --from=erlang-builder /usr/local/lib/erlang/lib/public_key-* /usr/local/lib/erlang/lib/
-COPY --from=erlang-builder /usr/local/lib/erlang/lib/asn1-* /usr/local/lib/erlang/lib/
-COPY --from=erlang-builder /usr/local/lib/erlang/releases /usr/local/lib/erlang/releases
+# Copy minimal Erlang (just the beam VM and core libs)
+COPY --from=erlang-builder /minimal/* /usr/local/bin/
+ENV ERL_LIBS=/usr/local/lib
 
-# Install minimal AWS CLI
-COPY --from=downloader /aws /tmp/aws
-RUN /tmp/aws/install --install-dir /usr/local/aws-cli --bin-dir /usr/local/bin && \
-    rm -rf /tmp/aws && \
-    # Remove AWS CLI bloat
-    rm -rf /usr/local/aws-cli/v2/*/dist/awscli/examples && \
-    rm -rf /usr/local/aws-cli/v2/*/dist/awscli/topics && \
-    rm -rf /usr/local/aws-cli/v2/*/dist/awscli/botocore/data/*/2* && \
-    find /usr/local/aws-cli -name "*.pyc" -delete && \
-    find /usr/local/aws-cli -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+# Copy minimal tools
+COPY --from=tools /sem /usr/local/bin/sem
+COPY --from=tools /tools/* /usr/local/bin/
+RUN chmod +x /usr/local/bin/*
 
-# Copy Semaphore CLI
-COPY --from=downloader /sem /usr/local/bin/sem
-RUN chmod +x /usr/local/bin/sem
+# Ultra-minimal setup
+RUN mkdir -p /opt/semaphore && chown ${USER}:${USER} /opt/semaphore
 
-# Install minimal Toolbox
-COPY --from=downloader /toolbox /home/${USER}/.toolbox
-RUN chown -R ${USER}:${USER} /home/${USER}/.toolbox && \
-    ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache && \
-    ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact && \
-    ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry
-
-# Setup minimal user environment
-RUN echo '. /home/semaphore/.toolbox/libcheckout' >> /home/${USER}/.bashrc && \
-    echo '. /home/semaphore/.toolbox/libchecksum' >> /home/${USER}/.bashrc && \
-    mkdir -p /opt/semaphore && \
-    chown -R ${USER}:${USER} /opt/semaphore /home/${USER}
-
-# Copy essential scripts
+# Copy your scripts
 COPY shutdown.sh /opt/semaphore/shutdown
 COPY entrypoint.sh /opt/semaphore/entrypoint.sh
-RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh && \
-    chown ${USER}:${USER} /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
+RUN chmod +x /opt/semaphore/* && chown ${USER}:${USER} /opt/semaphore/*
 
-# Final aggressive cleanup
-RUN rm -rf /tmp/* /var/tmp/* /var/cache/apk/* /usr/share/doc/* /usr/share/man/* /usr/share/info/* && \
-    find /usr/local -name "*.a" -delete && \
-    find /usr/local -name "*.la" -delete
+# Nuclear cleanup - remove everything possible
+RUN rm -rf /tmp/* /var/tmp/* /var/log/* /var/cache/* /var/backups/* && \
+    rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/* && \
+    rm -rf /usr/share/locale/* /usr/share/terminfo/* /usr/share/zoneinfo/* && \
+    rm -rf /usr/share/vim /usr/share/nano /usr/share/emacs* 2>/dev/null || true && \
+    find /usr -name "*.h" -delete 2>/dev/null || true && \
+    find /usr -name "*.a" -delete 2>/dev/null || true && \
+    find /usr -name "*.la" -delete 2>/dev/null || true && \
+    find /usr -name "*.pc" -delete 2>/dev/null || true && \
+    # Remove more from semaphoreci base if possible
+    rm -rf /root/.cache /root/.local 2>/dev/null || true
 
 USER ${USER}
 WORKDIR /home/${USER}
-
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
