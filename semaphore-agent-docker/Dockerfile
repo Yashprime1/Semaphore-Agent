@@ -9,6 +9,7 @@ RUN apk add --no-cache \
     ncurses-dev \
     openssl-dev \
     zlib-dev \
+    git \
     perl
 
 # Build and install a minimal Erlang/OTP
