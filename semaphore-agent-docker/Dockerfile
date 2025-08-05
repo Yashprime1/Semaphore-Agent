@@ -2,7 +2,7 @@
 FROM semaphoreci/agent:v2.3.0 as erlang-builder
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-USER root
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     build-essential \
@@ -33,11 +33,12 @@ RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src
 
 # Download stage for external tools
 FROM alpine:latest as downloader
-RUN apk add --no-cache curl tar
+RUN apk add --no-cache curl tar unzip
 
-# Download AWS CLI
+# Download and extract AWS CLI
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
-    && unzip awscliv2.zip
+    && unzip awscliv2.zip \
+    && rm awscliv2.zip
 
 # Download Semaphore CLI
 RUN curl -L https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz
@@ -50,7 +51,7 @@ RUN mkdir -p /toolbox \
 FROM semaphoreci/agent:v2.3.0
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-USER root
+ENV USER=semaphore
 
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -83,15 +84,12 @@ COPY --from=erlang-builder /usr/local/bin/typer /usr/local/bin/typer
 COPY --from=erlang-builder /usr/local/bin/ct_run /usr/local/bin/ct_run
 
 # Install AWS CLI from downloader stage
-COPY --from=downloader /aws/install /tmp/aws-install
-RUN /tmp/aws-install && rm -rf /tmp/aws-install
+COPY --from=downloader /aws /tmp/aws
+RUN /tmp/aws/install && rm -rf /tmp/aws
 
 # Copy Semaphore CLI from downloader stage
 COPY --from=downloader /sem /usr/local/bin/sem
 RUN chmod +x /usr/local/bin/sem
-
-USER semaphore
-ENV USER=semaphore
 
 # Copy and install Toolbox from downloader stage
 COPY --from=downloader /toolbox /home/${USER}/.toolbox
