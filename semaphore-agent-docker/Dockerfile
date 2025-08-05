@@ -99,9 +99,9 @@ RUN apt-get update && \
     find /usr/local/aws-cli -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null && \
     # Create required directories
     mkdir -p /opt/semaphore && \
-    # Create user and set permissions for all necessary files
-    adduser -D -h ${HOME} ${USER} && \
+    # Set permissions for all necessary files
     chown -R ${USER}:${USER} /usr/local/aws-cli /usr/local/bin/sem /home/${USER}/.toolbox /opt/semaphore && \
+    # Set execute permissions for the Semaphore CLI binary
     chmod +x /usr/local/bin/sem && \
     # Setup symbolic links and environment for the user
     ln -sf ${HOME}/.toolbox/cache /usr/local/bin/cache && \
