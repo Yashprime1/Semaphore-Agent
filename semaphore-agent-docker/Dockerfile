@@ -13,7 +13,7 @@ RUN apk add --no-cache \
 RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz \
     && cd otp_src_26.2.5.2/ \
     && ./configure \
-        --prefix=/opt/erlang \
+        --prefix=/usr/local \
         --enable-smp-support \
         --disable-debug \
         --disable-hipe \
@@ -62,7 +62,7 @@ RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src
     && rm -rf otp_src_26.2.5.2/
 
 # Aggressive Erlang cleanup - keep only absolute essentials
-RUN cd /opt/erlang && \
+RUN cd /usr/local && \
     # Remove all documentation and examples
     find . -name "doc" -type d -exec rm -rf {} + 2>/dev/null || true && \
     find . -name "examples" -type d -exec rm -rf {} + 2>/dev/null || true && \
@@ -118,18 +118,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/cache/apt/*
 
 # Copy minimal Erlang installation - only core components
-COPY --from=erlang-builder /opt/erlang/bin/erl /usr/local/bin/
-COPY --from=erlang-builder /opt/erlang/bin/erlc /usr/local/bin/
-COPY --from=erlang-builder /opt/erlang/bin/escript /usr/local/bin/
-COPY --from=erlang-builder /opt/erlang/erts-* /usr/local/lib/erlang/erts-13.2.2.3
-COPY --from=erlang-builder /opt/erlang/lib/kernel-* /usr/local/lib/erlang/lib/kernel-9.2.3
-COPY --from=erlang-builder /opt/erlang/lib/stdlib-* /usr/local/lib/erlang/lib/stdlib-5.2.3
-COPY --from=erlang-builder /opt/erlang/lib/sasl-* /usr/local/lib/erlang/lib/sasl-4.2.1
-COPY --from=erlang-builder /opt/erlang/lib/crypto-* /usr/local/lib/erlang/lib/crypto-5.4.1
-COPY --from=erlang-builder /opt/erlang/lib/ssl-* /usr/local/lib/erlang/lib/ssl-11.2.2
-COPY --from=erlang-builder /opt/erlang/lib/public_key-* /usr/local/lib/erlang/lib/public_key-1.15.1
-COPY --from=erlang-builder /opt/erlang/lib/asn1-* /usr/local/lib/erlang/lib/asn1-5.2.1
-COPY --from=erlang-builder /opt/erlang/releases /usr/local/lib/erlang/releases
+COPY --from=erlang-builder /usr/local/bin/erl /usr/local/bin/
+COPY --from=erlang-builder /usr/local/bin/erlc /usr/local/bin/
+COPY --from=erlang-builder /usr/local/bin/escript /usr/local/bin/
+COPY --from=erlang-builder /usr/local/lib/erlang/erts-* /usr/local/lib/erlang/
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/kernel-* /usr/local/lib/erlang/lib/
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/stdlib-* /usr/local/lib/erlang/lib/
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/sasl-* /usr/local/lib/erlang/lib/
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/crypto-* /usr/local/lib/erlang/lib/
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/ssl-* /usr/local/lib/erlang/lib/
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/public_key-* /usr/local/lib/erlang/lib/
+COPY --from=erlang-builder /usr/local/lib/erlang/lib/asn1-* /usr/local/lib/erlang/lib/
+COPY --from=erlang-builder /usr/local/lib/erlang/releases /usr/local/lib/erlang/releases
 
 # Install minimal AWS CLI
 COPY --from=downloader /aws /tmp/aws
