@@ -1,5 +1,6 @@
 # Build stage for Erlang/OTP
-FROM semaphoreci/agent:v2.3.0 as erlang-builder
+FROM semaphoreci/agent:v2.3.0 AS erlang-builder
+USER root
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
@@ -32,7 +33,7 @@ RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src
     && rm -rf otp_src_26.2.5.2/
 
 # Download stage for external tools
-FROM alpine:latest as downloader
+FROM alpine:latest AS downloader
 RUN apk add --no-cache curl tar unzip
 
 # Download and extract AWS CLI
@@ -49,27 +50,46 @@ RUN mkdir -p /toolbox \
 
 # Final runtime stage
 FROM semaphoreci/agent:v2.3.0
+USER root
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 ENV USER=semaphore
 
-# Install only runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    unzip \
-    jq \
-    git \
-    libncurses5 \
-    libssl1.1 \
-    openssh-client \
-    ca-certificates \
-    libwxgtk3.0-gtk3-0 \
-    libgl1-mesa-glx \
-    libglu1-mesa \
-    libpng16-16 \
-    libssh-4 \
-    unixodbc \
-    libxml2-utils \
+# First try to install packages, with fallback for different package names
+RUN apt-get update && \
+    (apt-get install -y --no-install-recommends \
+        curl \
+        unzip \
+        jq \
+        git \
+        libncurses5 \
+        libssl1.1 \
+        openssh-client \
+        ca-certificates \
+        libwxgtk3.0-gtk3-0 \
+        libgl1-mesa-glx \
+        libglu1-mesa \
+        libpng16-16 \
+        libssh-4 \
+        unixodbc \
+        libxml2-utils || \
+    apt-get install -y --no-install-recommends \
+        curl \
+        unzip \
+        jq \
+        git \
+        libncurses5 \
+        libssl1.1 \
+        openssh-client \
+        ca-certificates \
+        libwxbase3.0-0v5 \
+        libwxgtk3.0-0v5 \
+        libgl1-mesa-glx \
+        libglu1-mesa \
+        libpng16-16 \
+        libssh-gcrypt-4 \
+        unixodbc \
+        libxml2-utils) \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Erlang/OTP from builder stage
