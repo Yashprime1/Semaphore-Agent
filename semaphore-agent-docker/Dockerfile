@@ -168,6 +168,10 @@ RUN chmod +x /opt/semaphore/agent /usr/local/bin/sem \
     && mkdir -p /opt/semaphore \
     && chown -R ${USER}:${USER} /opt/semaphore
 
+# Create symbolic link for Python 3.13 compatibility
+RUN ln -sf /usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0 /usr/local/bin/libpython3.13.so.1.0 \
+    || ln -sf /usr/lib/x86_64-linux-gnu/libpython3.10.so /usr/local/bin/libpython3.13.so.1.0
+
 # Copy scripts with proper ownership
 COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
 COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
