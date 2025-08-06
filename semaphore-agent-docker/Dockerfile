@@ -114,6 +114,7 @@ RUN apt-get update \
         libssl3 \
         libncurses6 \
         zlib1g \
+    && ssh-keyscan github.com >> /root/.ssh/known_hosts \
     && apt-get autoremove -y \
     && apt-get autoclean \
     && rm -rf /var/lib/apt/lists/* \

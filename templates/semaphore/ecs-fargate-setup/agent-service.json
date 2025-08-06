@@ -112,7 +112,15 @@
                   }
                 }
               ]
-            }   
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "*"
+            }  
           ]
         },
         "Roles": [
@@ -283,38 +291,18 @@
             "Image": {
               "Fn::Sub":"artifactory.clevertap.net/clevertap/semaphore-agent:${ContainerTag}"
             },
-            "LogConfiguration": {
-              "LogDriver": "splunk",
-              "Options": {
-                "splunk-format": "raw",
-                "splunk-verify-connection": "false",
-                "splunk-index": "semaphore-ecs-agents",
-                "splunk-source": {
-                  "Ref": "AWS::StackName"
-                },
-                "splunk-sourcetype": "stdout",
-                "labels": "stack",
-                "splunk-url":  "https://http-inputs.clevertap.splunkcloud.com"
-              },
-              "SecretOptions": [
-                {
-                  "Name": "splunk-token",
-                  "ValueFrom": {
-                    "Fn::Join": [
-                      ":",
-                      [
-                        {
-                          "Fn::ImportValue": {
-                            "Fn::Sub": "${StackPrefix}-SharedResources-SplunkTokenSecretsManagerSecretArn"
-                          }
-                        },
-                        "splunk-token::"
-                      ]
-                    ]
-                  }
+          "LogConfiguration": {
+                "LogDriver": "awslogs",
+                "Options": {
+                  "awslogs-group": {
+                    "Fn::Sub": "${AWS::StackName}-ContainerLogs"
+                  },
+                  "awslogs-region": {
+                    "Ref": "AWS::Region"
+                  },
+                  "awslogs-stream-prefix": "ecs"
                 }
-              ]
-            },
+              },
             "RepositoryCredentials": {
               "CredentialsParameter": {
                 "Fn::ImportValue": {
