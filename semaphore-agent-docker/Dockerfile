@@ -125,8 +125,7 @@ RUN apt-get update \
     && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy main" > /etc/apt/sources.list.d/deadsnakes.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        python3.13-minimal \
-        libpython3.13-minimal \
+        python3.13 \
         libpython3.13-stdlib \
     && apt-get remove -y gnupg software-properties-common \
     && apt-get autoremove -y \
