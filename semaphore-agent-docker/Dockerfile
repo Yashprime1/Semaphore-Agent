@@ -142,7 +142,6 @@ COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphor
 COPY --from=tools-builder --chown=root:root /sem /usr/local/bin/sem
 COPY --from=erlang-builder --chown=root:root /opt/erlang /opt/erlang
 COPY --from=aws-builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
-COPY --from=aws-builder --chown=root:root /usr/local/bin/aws_completer /usr/local/bin/aws_completer
 
 # Set up toolbox using your working approach
 COPY --from=tools-builder /toolbox /root/.toolbox
