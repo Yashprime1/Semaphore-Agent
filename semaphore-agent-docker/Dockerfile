@@ -73,8 +73,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl unzip \
     && rm -rf awscliv2.zip aws \
     && apt-get purge -y --auto-remove curl unzip \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && strip --strip-unneeded /usr/local/bin/aws /usr/local/bin/aws_completer 2>/dev/null || true 
+    && rm -rf /var/lib/apt/lists/* 
     
 # Stage 3: Get Semaphore tools
 FROM alpine:3.18 AS tools-builder
