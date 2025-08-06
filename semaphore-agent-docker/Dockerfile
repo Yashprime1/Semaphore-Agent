@@ -115,17 +115,20 @@ RUN apt-get update \
         openssh-client \
         curl \
         jq \
+        gnupg \
         software-properties-common \
         libc6 \
         libssl3 \
         libncurses6 \
         zlib1g \
-    && add-apt-repository ppa:deadsnakes/ppa -y \
+    && curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy main" > /etc/apt/sources.list.d/deadsnakes.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         python3.13-minimal \
         libpython3.13-minimal \
         libpython3.13-stdlib \
+    && apt-get remove -y gnupg software-properties-common \
     && apt-get autoremove -y \
     && apt-get autoclean \
     && rm -rf /var/lib/apt/lists/* \
