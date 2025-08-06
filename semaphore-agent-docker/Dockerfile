@@ -145,6 +145,7 @@ COPY --from=tools-builder /toolbox /root/.toolbox
 RUN mkdir -p /home/${USER}/.toolbox \
     && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
     && chown -R ${USER}:${USER} /home/${USER}/.toolbox \
+    && chmod +x /home/${USER}/.toolbox/* \
     && echo '. /home/semaphore/.toolbox/libcheckout' >> /home/${USER}/.bashrc \
     && echo '. /home/semaphore/.toolbox/libchecksum' >> /home/${USER}/.bashrc \
     && chown ${USER}:${USER} /home/${USER}/.bashrc \
