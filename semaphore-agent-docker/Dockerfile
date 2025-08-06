@@ -107,7 +107,7 @@ ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 RUN groupadd -g 1000 ${USER} \
     && useradd -u 1000 -g ${USER} -m -s /bin/bash ${USER}
 
-# Install packages and clean up in a single optimized layer
+# Install packages including Python 3.13 and clean up in a single optimized layer
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -115,12 +115,35 @@ RUN apt-get update \
         openssh-client \
         curl \
         jq \
-        python3 \
-        libpython3.10 \
+        software-properties-common \
         libc6 \
         libssl3 \
         libncurses6 \
         zlib1g \
+    && add-apt-repository ppa:deadsnakes/ppa -y \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3.13-minimal \
+        libpython3.13-minimal \
+        libpython3.13-stdlib \
+    && apt-get autoremove -y \
+    && apt-get autoclean \
+    && rm -rf /var/lib/apt/lists/* \
+        /var/cache/apt/* \
+        /tmp/* \
+        /var/tmp/* \
+        /usr/share/doc \
+        /usr/share/man \
+        /usr/share/info \
+        /usr/share/locale \
+        /usr/share/pixmaps \
+        /usr/share/zoneinfo \
+        /usr/share/bug \
+        /usr/share/lintian \
+        /var/log/* \
+        /usr/lib/systemd \
+        /lib/systemd \
+        /var/lib/systemd \
     && apt-get autoremove -y \
     && apt-get autoclean \
     && rm -rf /var/lib/apt/lists/* \
@@ -163,14 +186,11 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
     && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results
 
-# Set permissions
+# Set permissions and ensure Python 3.13 is properly linked
 RUN chmod +x /opt/semaphore/agent /usr/local/bin/sem \
     && mkdir -p /opt/semaphore \
-    && chown -R ${USER}:${USER} /opt/semaphore
-
-# Create symbolic link for Python 3.13 compatibility
-RUN ln -sf /usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0 /usr/local/bin/libpython3.13.so.1.0 \
-    || ln -sf /usr/lib/x86_64-linux-gnu/libpython3.10.so /usr/local/bin/libpython3.13.so.1.0
+    && chown -R ${USER}:${USER} /opt/semaphore \
+    && ldconfig
 
 # Copy scripts with proper ownership
 COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
