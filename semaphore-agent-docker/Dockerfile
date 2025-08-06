@@ -95,6 +95,7 @@ ENV HOME=/home/${USER}
 ENV PATH="/opt/erlang/bin:${PATH}"
 ENV BASH_ENV="${HOME}/.bashrc"
 ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
+ENV PYTHONPATH=/usr/local/lib/python3.11/site-packages
 
 # Create user first for better layer caching
 RUN groupadd -g 1000 ${USER} \
