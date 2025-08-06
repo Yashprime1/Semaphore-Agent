@@ -112,6 +112,8 @@ RUN apt-get update && \
     ln -sf ${HOME}/.toolbox/cache /usr/local/bin/cache && \
     ln -sf ${HOME}/.toolbox/artifact /usr/local/bin/artifact && \
     ln -sf ${HOME}/.toolbox/retry /usr/local/bin/retry && \
+    ln -sf ${HOME}/.toolbox/sem-context /usr/local/bin/sem-context && \
+    ln -sf ${HOME}/.toolbox/test-results /usr/local/bin/test-results && \
     # Add toolbox functions to .bashrc
     echo '. /home/semaphore/.toolbox/libcheckout' >> ${HOME}/.bashrc && \
     echo '. /home/semaphore/.toolbox/libchecksum' >> ${HOME}/.bashrc
