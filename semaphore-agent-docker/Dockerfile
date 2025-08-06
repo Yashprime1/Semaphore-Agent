@@ -66,15 +66,18 @@ RUN apk add --no-cache --virtual .build-deps \
 # Stage 2: Get AWS CLI (binary)
 FROM ubuntu:22.04 AS aws-builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl unzip \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl unzip \
     && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
     && ./aws/install \
     && rm -rf awscliv2.zip aws \
-    && apt-get purge -y --auto-remove curl unzip \
+    && apt-get purge -y --auto-remove curl unzip ca-certificates \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* 
-    
+    && rm -rf /var/lib/apt/lists/* \
+    && strip --strip-unneeded /usr/local/bin/aws /usr/local/bin/aws_completer 2>/dev/null || true \
+    && find /usr/local/aws-cli/v2 -type f -exec strip --strip-unneeded {} \; 2>/dev/null || true
+
 # Stage 3: Get Semaphore tools
 FROM alpine:3.18 AS tools-builder
 RUN apk add --no-cache curl \
@@ -99,7 +102,6 @@ ENV HOME=/home/${USER}
 ENV PATH="/opt/erlang/bin:/usr/local/aws-cli/v2/current:${PATH}"
 ENV BASH_ENV="${HOME}/.bashrc"
 ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
-ENV PYTHONPATH=/usr/local/lib/python3.11/site-packages
 
 # Create user first for better layer caching
 RUN groupadd -g 1000 ${USER} \
@@ -142,6 +144,8 @@ COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphor
 COPY --from=tools-builder --chown=root:root /sem /usr/local/bin/sem
 COPY --from=erlang-builder --chown=root:root /opt/erlang /opt/erlang
 COPY --from=aws-builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
+COPY --from=aws-builder --chown=root:root /usr/local/bin/aws_completer /usr/local/bin/aws_completer
+COPY --from=aws-builder --chown=root:root /usr/local/aws-cli /usr/local/aws-cli
 
 # Set up toolbox using your working approach
 COPY --from=tools-builder /toolbox /root/.toolbox
