@@ -1,16 +1,16 @@
 # Stage 1: Build minimal Erlang from source
 FROM alpine:3.18 AS erlang-builder
 
-RUN apk add --no-cache build-base curl autoconf ncurses-dev openssl-dev zlib-dev perl
-
-# Build ultra-minimal Erlang with only essential components
-RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz \
+RUN apk add --no-cache --virtual .build-deps \
+        build-base curl autoconf ncurses-dev openssl-dev zlib-dev perl \
+    && curl -fsSL https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz \
     && cd otp_src_26.2.5.2/ \
     && ./configure \
-        --prefix=/usr/local \
+        --prefix=/opt/erlang \
         --enable-smp-support \
         --disable-debug \
         --disable-hipe \
+        --disable-sctp \
         --without-javac \
         --without-wx \
         --without-observer \
@@ -50,125 +50,134 @@ RUN curl -L https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src
         --without-inets \
         --without-edoc \
         --enable-shared-zlib \
+        --enable-static-drivers \
     && make -j$(nproc) \
     && make install \
-    && strip /usr/local/lib/erlang/erts-*/bin/* 2>/dev/null || true \
-    && find /usr/local/lib/erlang -name "*.so" -exec strip {} \; 2>/dev/null || true \
-    && rm -rf /usr/local/lib/erlang/lib/*/src \
-    && rm -rf /usr/local/lib/erlang/lib/*/examples \
-    && rm -rf /usr/local/lib/erlang/lib/*/doc \
-    && cd .. && rm -rf otp_src_26.2.5.2/
+    && cd .. \
+    && rm -rf otp_src_26.2.5.2/ \
+    && apk del .build-deps \
+    && strip --strip-unneeded /opt/erlang/lib/erlang/erts-*/bin/* 2>/dev/null || true \
+    && find /opt/erlang -name "*.so" -exec strip --strip-unneeded {} \; 2>/dev/null || true \
+    && find /opt/erlang -type d -name "src" -exec rm -rf {} + 2>/dev/null || true \
+    && find /opt/erlang -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true \
+    && find /opt/erlang -type d -name "doc" -exec rm -rf {} + 2>/dev/null || true \
+    && find /opt/erlang -name "*.beam" ! -path "*/ebin/*" -delete 2>/dev/null || true
 
-# Stage 2: Get AWS CLI (pip version - much smaller than binary)
+# Stage 2: Get AWS CLI (minimal pip version)
 FROM python:3.11-alpine AS aws-builder
-RUN pip install --no-cache-dir awscli==1.32.106 \
+RUN pip install --no-cache-dir --no-deps awscli==1.32.106 \
     && find /usr/local -name "*.pyc" -delete \
     && find /usr/local -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
-    && rm -rf /root/.cache
+    && find /usr/local -name "*.pyo" -delete 2>/dev/null || true \
+    && rm -rf /root/.cache /usr/local/lib/python3.11/site-packages/pip*
 
 # Stage 3: Get Semaphore tools
 FROM alpine:3.18 AS tools-builder
-RUN apk add --no-cache curl tar
+RUN apk add --no-cache curl \
+    && curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz \
+    && strip --strip-unneeded sem 2>/dev/null || true \
+    && mkdir -p /toolbox \
+    && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /toolbox --strip-components=1 \
+    && find /toolbox -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true
 
-# Get Semaphore CLI
-RUN curl -L https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz
-
-# Get Semaphore Toolbox
-RUN mkdir -p /toolbox && \
-    curl -L https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /toolbox --strip-components=1 && \
-    echo "Available toolbox files:" && find /toolbox -type f
-
-# Stage 4: Extract the real Semaphore agent
+# Stage 4: Extract the Semaphore agent
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
-# This stage is just to extract the agent binary
 
-# Stage 5: Final optimized image
+# Stage 5: Final optimized image using distroless-like approach
 FROM ubuntu:22.04
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=UTC
+# Build args for better caching
+ARG DEBIAN_FRONTEND=noninteractive
+ARG TZ=UTC
+
 ENV USER=semaphore
 ENV HOME=/home/${USER}
+ENV PATH="/opt/erlang/bin:${PATH}"
 
-# Create semaphore user
-RUN groupadd -g 1000 ${USER} && \
-    useradd -u 1000 -g ${USER} -m -s /bin/bash ${USER}
+# Create user first for better layer caching
+RUN groupadd -g 1000 ${USER} \
+    && useradd -u 1000 -g ${USER} -m -s /bin/bash ${USER}
 
-# Install only essential packages in a single layer
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+# Install packages and clean up in a single optimized layer
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
         ca-certificates \
         git \
         openssh-client \
         curl \
         jq \
-        python3 \
+        python3-minimal \
         python3-distutils \
         libc6 \
         libssl3 \
         libncurses6 \
         zlib1g \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* \
-    && rm -rf /usr/share/doc /usr/share/man /usr/share/info /usr/share/locale /usr/share/pixmaps /usr/share/zoneinfo
+    && apt-get autoremove -y \
+    && apt-get autoclean \
+    && rm -rf /var/lib/apt/lists/* \
+        /var/cache/apt/* \
+        /tmp/* \
+        /var/tmp/* \
+        /usr/share/doc \
+        /usr/share/man \
+        /usr/share/info \
+        /usr/share/locale \
+        /usr/share/pixmaps \
+        /usr/share/zoneinfo \
+        /usr/share/bug \
+        /usr/share/lintian \
+        /var/log/* \
+        /usr/lib/systemd \
+        /lib/systemd \
+        /var/lib/systemd
 
-# Copy the real Semaphore agent binary
-COPY --from=agent-extractor /opt/semaphore/agent /opt/semaphore/agent
-RUN chmod +x /opt/semaphore/agent
+# Copy binaries and set permissions in optimal order
+COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
+COPY --from=tools-builder --chown=root:root /sem /usr/local/bin/sem
+COPY --from=erlang-builder --chown=root:root /opt/erlang /opt/erlang
+COPY --from=aws-builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
+COPY --from=aws-builder --chown=root:root /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
-# Copy AWS CLI (pip version - much smaller)
-COPY --from=aws-builder /usr/local/bin/aws /usr/local/bin/aws
-COPY --from=aws-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+# Set up toolbox and permissions
+COPY --from=tools-builder --chown=${USER}:${USER} /toolbox ${HOME}/.toolbox
+RUN chmod +x /opt/semaphore/agent /usr/local/bin/sem \
+    && mkdir -p /opt/semaphore \
+    && chown -R ${USER}:${USER} /opt/semaphore
 
-# Copy Semaphore CLI
-COPY --from=tools-builder /sem /usr/local/bin/sem
-RUN chmod +x /usr/local/bin/sem
+# Create optimized wrapper scripts for toolbox commands
+RUN for tool in cache artifact retry sem-context test-results; do \
+        echo '#!/bin/bash' > /usr/local/bin/$tool; \
+        echo "exec \"\${HOME}/.toolbox/$tool\" \"\$@\" 2>/dev/null || echo \"$tool: \$*\" >&2" >> /usr/local/bin/$tool; \
+        chmod +x /usr/local/bin/$tool; \
+    done \
+    && echo '#!/bin/bash' > /usr/local/bin/sem-context \
+    && echo 'if [ -x "${HOME}/.toolbox/sem-context" ]; then exec "${HOME}/.toolbox/sem-context" "$@"; else' >> /usr/local/bin/sem-context \
+    && echo '  case "$1" in get) echo "${!2}";; put) export "$2"="$3";; *) echo "Usage: sem-context {get|put} <key> [value]" >&2; exit 1;; esac' >> /usr/local/bin/sem-context \
+    && echo 'fi' >> /usr/local/bin/sem-context \
+    && chmod +x /usr/local/bin/sem-context
 
-# Copy minimal Erlang installation
-COPY --from=erlang-builder /usr/local/lib/erlang /usr/local/lib/erlang
-COPY --from=erlang-builder /usr/local/bin/erl /usr/local/bin/erl
-COPY --from=erlang-builder /usr/local/bin/erlc /usr/local/bin/erlc
-COPY --from=erlang-builder /usr/local/bin/escript /usr/local/bin/escript
+# Set up shell environment
+RUN echo 'for lib in libcheckout libchecksum; do [ -f "${HOME}/.toolbox/$lib" ] && . "${HOME}/.toolbox/$lib"; done' >> ${HOME}/.bashrc \
+    && chown ${USER}:${USER} ${HOME}/.bashrc
 
-# Copy Semaphore Toolbox and create essential tools
-COPY --from=tools-builder /toolbox ${HOME}/.toolbox
-RUN chown -R ${USER}:${USER} ${HOME}/.toolbox && \
-    # Create working versions of toolbox commands
-    echo '#!/bin/bash' > /usr/local/bin/cache && \
-    echo 'if [ -x "${HOME}/.toolbox/cache" ]; then exec "${HOME}/.toolbox/cache" "$@"; else echo "cache: $*" >&2; fi' >> /usr/local/bin/cache && \
-    echo '#!/bin/bash' > /usr/local/bin/artifact && \
-    echo 'if [ -x "${HOME}/.toolbox/artifact" ]; then exec "${HOME}/.toolbox/artifact" "$@"; else echo "artifact: $*" >&2; fi' >> /usr/local/bin/artifact && \
-    echo '#!/bin/bash' > /usr/local/bin/retry && \
-    echo 'if [ -x "${HOME}/.toolbox/retry" ]; then exec "${HOME}/.toolbox/retry" "$@"; else echo "retry: $*" >&2; fi' >> /usr/local/bin/retry && \
-    echo '#!/bin/bash' > /usr/local/bin/sem-context && \
-    echo 'if [ -x "${HOME}/.toolbox/sem-context" ]; then exec "${HOME}/.toolbox/sem-context" "$@"; else' >> /usr/local/bin/sem-context && \
-    echo '  case "$1" in get) echo "${!2}";; put) export "$2"="$3";; *) echo "Usage: sem-context {get|put} <key> [value]" >&2; exit 1;; esac' >> /usr/local/bin/sem-context && \
-    echo 'fi' >> /usr/local/bin/sem-context && \
-    echo '#!/bin/bash' > /usr/local/bin/test-results && \
-    echo 'if [ -x "${HOME}/.toolbox/test-results" ]; then exec "${HOME}/.toolbox/test-results" "$@"; else echo "test-results: $*" >&2; fi' >> /usr/local/bin/test-results && \
-    chmod +x /usr/local/bin/cache /usr/local/bin/artifact /usr/local/bin/retry /usr/local/bin/sem-context /usr/local/bin/test-results
-
-# Setup toolbox environment
-RUN echo '. ${HOME}/.toolbox/libcheckout 2>/dev/null || true' >> ${HOME}/.bashrc && \
-    echo '. ${HOME}/.toolbox/libchecksum 2>/dev/null || true' >> ${HOME}/.bashrc && \
-    chown ${USER}:${USER} ${HOME}/.bashrc && \
-    mkdir -p /opt/semaphore && \
-    chown -R ${USER}:${USER} /opt/semaphore
-
-# Final aggressive cleanup to minimize size
-RUN find /usr -name "*.a" -delete 2>/dev/null || true && \
-    find /usr -name "*.la" -delete 2>/dev/null || true && \
-    rm -rf /usr/include/* 2>/dev/null || true && \
-    rm -rf /var/log/* 2>/dev/null || true && \
-    rm -rf /usr/lib/systemd 2>/dev/null || true && \
-    find /usr/local -name "*.pyc" -delete 2>/dev/null || true
-
-# Copy essential scripts
+# Copy scripts with proper ownership
 COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
 COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
+# Final aggressive cleanup in a single layer
+RUN find /usr -name "*.a" -delete 2>/dev/null || true \
+    && find /usr -name "*.la" -delete 2>/dev/null || true \
+    && find /usr -name "*.pyc" -delete 2>/dev/null || true \
+    && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
+    && rm -rf /usr/include 2>/dev/null || true
+
+# Switch to non-root user
 USER ${USER}
 WORKDIR ${HOME}
+
+# Health check for better container management
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD /opt/semaphore/agent --version > /dev/null || exit 1
 
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
