@@ -84,7 +84,8 @@ RUN apt-get update && \
     libncurses5 \
     libtinfo5 \
     zlib1g \
-    unzip && \
+    unzip \
+    jq && \
     mkdir -p /tmp/downloads && \
     # AWS CLI v2
     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/downloads/awscliv2.zip" && \
