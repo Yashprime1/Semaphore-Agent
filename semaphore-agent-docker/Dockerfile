@@ -115,7 +115,8 @@ RUN apt-get update \
         openssh-client \
         curl \
         jq \
-        python3-minimal \
+        python3 \
+        libpython3.10 \
         libc6 \
         libssl3 \
         libncurses6 \
