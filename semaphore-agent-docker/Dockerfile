@@ -63,13 +63,19 @@ RUN apk add --no-cache --virtual .build-deps \
     && find /opt/erlang -type d -name "doc" -exec rm -rf {} + 2>/dev/null || true \
     && find /opt/erlang -name "*.beam" ! -path "*/ebin/*" -delete 2>/dev/null || true
 
-# Stage 2: Get AWS CLI (minimal pip version)
-FROM python:3.11-alpine AS aws-builder
-RUN pip install --no-cache-dir --no-deps awscli==1.32.106 \
-    && find /usr/local -name "*.pyc" -delete \
-    && find /usr/local -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
-    && find /usr/local -name "*.pyo" -delete 2>/dev/null || true \
-    && rm -rf /root/.cache /usr/local/lib/python3.11/site-packages/pip*
+# Stage 2: Get AWS CLI (binary)
+FROM ubuntu:22.04 AS aws-builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip \
+    && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+    && unzip awscliv2.zip \
+    && ./aws/install \
+    && rm -rf awscliv2.zip aws \
+    && apt-get purge -y --auto-remove curl unzip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && strip --strip-unneeded /usr/local/bin/aws /usr/local/bin/aws_completer 2>/dev/null || true \
+    && find /usr/local/aws-cli/v2 -type f -exec strip --strip-unneeded {} \; 2>/dev/null || true
 
 # Stage 3: Get Semaphore tools
 FROM alpine:3.18 AS tools-builder
@@ -92,7 +98,7 @@ ARG TZ=UTC
 
 ENV USER=semaphore
 ENV HOME=/home/${USER}
-ENV PATH="/opt/erlang/bin:${PATH}"
+ENV PATH="/opt/erlang/bin:/usr/local/aws-cli/v2/current:${PATH}"
 ENV BASH_ENV="${HOME}/.bashrc"
 ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 ENV PYTHONPATH=/usr/local/lib/python3.11/site-packages
@@ -110,7 +116,6 @@ RUN apt-get update \
         curl \
         jq \
         python3-minimal \
-        python3-distutils \
         libc6 \
         libssl3 \
         libncurses6 \
@@ -139,9 +144,8 @@ COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphor
 COPY --from=tools-builder --chown=root:root /sem /usr/local/bin/sem
 COPY --from=erlang-builder --chown=root:root /opt/erlang /opt/erlang
 COPY --from=aws-builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
-COPY --from=aws-builder --chown=root:root /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-
-RUN sed -i 's|/usr/local/bin/python3.11|/usr/bin/python3|' /usr/local/bin/aws
+COPY --from=aws-builder --chown=root:root /usr/local/bin/aws_completer /usr/local/bin/aws_completer
+COPY --from=aws-builder --chown=root:root /usr/local/aws-cli /usr/local/aws-cli
 
 # Set up toolbox using your working approach
 COPY --from=tools-builder /toolbox /root/.toolbox
@@ -174,7 +178,10 @@ RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.pyc" -delete 2>/dev/null || true \
     && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
     && rm -rf /usr/include 2>/dev/null || true \
-    && rm -rf /root/.toolbox
+    && rm -rf /root/.toolbox \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/awscli/data
 
 # Switch to non-root user
 USER ${USER}
