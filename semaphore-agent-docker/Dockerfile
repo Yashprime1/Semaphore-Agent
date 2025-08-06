@@ -146,37 +146,37 @@ RUN chmod +x /opt/semaphore/agent /usr/local/bin/sem \
     && mkdir -p /opt/semaphore \
     && chown -R ${USER}:${USER} /opt/semaphore
 
-# Create proper wrapper scripts for toolbox commands that maintain shell context
-RUN for tool in cache artifact retry test-results; do \
-        if [ -x "${HOME}/.toolbox/$tool" ]; then \
-            ln -sf "${HOME}/.toolbox/$tool" "/usr/local/bin/$tool"; \
-        else \
-            echo '#!/bin/bash' > "/usr/local/bin/$tool"; \
-            echo "echo \"$tool: \$*\" >&2" >> "/usr/local/bin/$tool"; \
-            chmod +x "/usr/local/bin/$tool"; \
-        fi; \
-    done \
-    # Handle sem-context specially
-    && if [ -x "${HOME}/.toolbox/sem-context" ]; then \
-        ln -sf "${HOME}/.toolbox/sem-context" "/usr/local/bin/sem-context"; \
-    else \
-        echo '#!/bin/bash' > /usr/local/bin/sem-context; \
-        echo 'case "$1" in' >> /usr/local/bin/sem-context; \
-        echo '  get) echo "${!2}" ;;' >> /usr/local/bin/sem-context; \
-        echo '  put) export "$2"="$3" ;;' >> /usr/local/bin/sem-context; \
-        echo '  *) echo "Usage: sem-context {get|put} <key> [value]" >&2; exit 1 ;;' >> /usr/local/bin/sem-context; \
-        echo 'esac' >> /usr/local/bin/sem-context; \
-        chmod +x /usr/local/bin/sem-context; \
-    fi
+# Revert to the working approach with direct symlinks
+RUN chown ${USER}:${USER} ${HOME}/.toolbox \
+    && ln -sf ${HOME}/.toolbox/cache /usr/local/bin/cache \
+    && ln -sf ${HOME}/.toolbox/artifact /usr/local/bin/artifact \
+    && ln -sf ${HOME}/.toolbox/sem-context /usr/local/bin/sem-context \
+    && ln -sf ${HOME}/.toolbox/retry /usr/local/bin/retry \
+    && ln -sf ${HOME}/.toolbox/test-results /usr/local/bin/test-results
 
-# Set up proper shell environment for toolbox functionality
+# Set up proper shell environment - load libraries conditionally and safely
 RUN echo '# Semaphore Toolbox Environment' > ${HOME}/.bashrc \
     && echo 'export SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"' >> ${HOME}/.bashrc \
-    && echo '# Source toolbox libraries' >> ${HOME}/.bashrc \
-    && echo '[ -f "${HOME}/.toolbox/libcheckout" ] && source "${HOME}/.toolbox/libcheckout"' >> ${HOME}/.bashrc \
-    && echo '[ -f "${HOME}/.toolbox/libchecksum" ] && source "${HOME}/.toolbox/libchecksum"' >> ${HOME}/.bashrc \
-    && echo '# Ensure toolbox functions are available' >> ${HOME}/.bashrc \
-    && echo 'export -f checkout 2>/dev/null || true' >> ${HOME}/.bashrc \
+    && echo '# Source toolbox libraries conditionally' >> ${HOME}/.bashrc \
+    && echo 'if [ -f "${HOME}/.toolbox/libchecksum" ]; then' >> ${HOME}/.bashrc \
+    && echo '    source "${HOME}/.toolbox/libchecksum" 2>/dev/null || true' >> ${HOME}/.bashrc \
+    && echo 'fi' >> ${HOME}/.bashrc \
+    && echo '# Source libcheckout only when needed (not during shell initialization)' >> ${HOME}/.bashrc \
+    && echo 'load_checkout() {' >> ${HOME}/.bashrc \
+    && echo '    if [ -f "${HOME}/.toolbox/libcheckout" ]; then' >> ${HOME}/.bashrc \
+    && echo '        source "${HOME}/.toolbox/libcheckout" 2>/dev/null || true' >> ${HOME}/.bashrc \
+    && echo '    fi' >> ${HOME}/.bashrc \
+    && echo '}' >> ${HOME}/.bashrc \
+    && echo '# Create checkout wrapper function' >> ${HOME}/.bashrc \
+    && echo 'checkout() {' >> ${HOME}/.bashrc \
+    && echo '    load_checkout' >> ${HOME}/.bashrc \
+    && echo '    if declare -f checkout > /dev/null 2>&1; then' >> ${HOME}/.bashrc \
+    && echo '        command checkout "$@"' >> ${HOME}/.bashrc \
+    && echo '    else' >> ${HOME}/.bashrc \
+    && echo '        echo "checkout function not available" >&2' >> ${HOME}/.bashrc \
+    && echo '        return 1' >> ${HOME}/.bashrc \
+    && echo '    fi' >> ${HOME}/.bashrc \
+    && echo '}' >> ${HOME}/.bashrc \
     && chown ${USER}:${USER} ${HOME}/.bashrc
 
 # Copy scripts with proper ownership
@@ -195,11 +195,10 @@ RUN find /usr -name "*.a" -delete 2>/dev/null || true \
 USER ${USER}
 WORKDIR ${HOME}
 
-# Verify toolbox setup is working correctly
+# Verify toolbox setup is working correctly without triggering libcheckout
 RUN /bin/bash -c "source ~/.bashrc && echo 'Toolbox environment loaded successfully'" \
     && ls -la ~/.toolbox/ \
-    && echo "Testing toolbox functions..." \
-    && /bin/bash -c "source ~/.bashrc; type -t checkout" || echo "checkout function not found - will be loaded at runtime"
+    && echo "Toolbox commands available via symlinks"
 
 # Health check for better container management
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
