@@ -93,6 +93,8 @@ ARG TZ=UTC
 ENV USER=semaphore
 ENV HOME=/home/${USER}
 ENV PATH="/opt/erlang/bin:${PATH}"
+ENV BASH_ENV="${HOME}/.bashrc"
+ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 
 # Create user first for better layer caching
 RUN groupadd -g 1000 ${USER} \
@@ -144,20 +146,37 @@ RUN chmod +x /opt/semaphore/agent /usr/local/bin/sem \
     && mkdir -p /opt/semaphore \
     && chown -R ${USER}:${USER} /opt/semaphore
 
-# Create optimized wrapper scripts for toolbox commands
-RUN for tool in cache artifact retry sem-context test-results; do \
-        echo '#!/bin/bash' > /usr/local/bin/$tool; \
-        echo "exec \"\${HOME}/.toolbox/$tool\" \"\$@\" 2>/dev/null || echo \"$tool: \$*\" >&2" >> /usr/local/bin/$tool; \
-        chmod +x /usr/local/bin/$tool; \
+# Create proper wrapper scripts for toolbox commands that maintain shell context
+RUN for tool in cache artifact retry test-results; do \
+        if [ -x "${HOME}/.toolbox/$tool" ]; then \
+            ln -sf "${HOME}/.toolbox/$tool" "/usr/local/bin/$tool"; \
+        else \
+            echo '#!/bin/bash' > "/usr/local/bin/$tool"; \
+            echo "echo \"$tool: \$*\" >&2" >> "/usr/local/bin/$tool"; \
+            chmod +x "/usr/local/bin/$tool"; \
+        fi; \
     done \
-    && echo '#!/bin/bash' > /usr/local/bin/sem-context \
-    && echo 'if [ -x "${HOME}/.toolbox/sem-context" ]; then exec "${HOME}/.toolbox/sem-context" "$@"; else' >> /usr/local/bin/sem-context \
-    && echo '  case "$1" in get) echo "${!2}";; put) export "$2"="$3";; *) echo "Usage: sem-context {get|put} <key> [value]" >&2; exit 1;; esac' >> /usr/local/bin/sem-context \
-    && echo 'fi' >> /usr/local/bin/sem-context \
-    && chmod +x /usr/local/bin/sem-context
+    # Handle sem-context specially
+    && if [ -x "${HOME}/.toolbox/sem-context" ]; then \
+        ln -sf "${HOME}/.toolbox/sem-context" "/usr/local/bin/sem-context"; \
+    else \
+        echo '#!/bin/bash' > /usr/local/bin/sem-context; \
+        echo 'case "$1" in' >> /usr/local/bin/sem-context; \
+        echo '  get) echo "${!2}" ;;' >> /usr/local/bin/sem-context; \
+        echo '  put) export "$2"="$3" ;;' >> /usr/local/bin/sem-context; \
+        echo '  *) echo "Usage: sem-context {get|put} <key> [value]" >&2; exit 1 ;;' >> /usr/local/bin/sem-context; \
+        echo 'esac' >> /usr/local/bin/sem-context; \
+        chmod +x /usr/local/bin/sem-context; \
+    fi
 
-# Set up shell environment
-RUN echo 'for lib in libcheckout libchecksum; do [ -f "${HOME}/.toolbox/$lib" ] && . "${HOME}/.toolbox/$lib"; done' >> ${HOME}/.bashrc \
+# Set up proper shell environment for toolbox functionality
+RUN echo '# Semaphore Toolbox Environment' > ${HOME}/.bashrc \
+    && echo 'export SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"' >> ${HOME}/.bashrc \
+    && echo '# Source toolbox libraries' >> ${HOME}/.bashrc \
+    && echo '[ -f "${HOME}/.toolbox/libcheckout" ] && source "${HOME}/.toolbox/libcheckout"' >> ${HOME}/.bashrc \
+    && echo '[ -f "${HOME}/.toolbox/libchecksum" ] && source "${HOME}/.toolbox/libchecksum"' >> ${HOME}/.bashrc \
+    && echo '# Ensure toolbox functions are available' >> ${HOME}/.bashrc \
+    && echo 'export -f checkout 2>/dev/null || true' >> ${HOME}/.bashrc \
     && chown ${USER}:${USER} ${HOME}/.bashrc
 
 # Copy scripts with proper ownership
@@ -175,6 +194,12 @@ RUN find /usr -name "*.a" -delete 2>/dev/null || true \
 # Switch to non-root user
 USER ${USER}
 WORKDIR ${HOME}
+
+# Verify toolbox setup is working correctly
+RUN /bin/bash -c "source ~/.bashrc && echo 'Toolbox environment loaded successfully'" \
+    && ls -la ~/.toolbox/ \
+    && echo "Testing toolbox functions..." \
+    && /bin/bash -c "source ~/.bashrc; type -t checkout" || echo "checkout function not found - will be loaded at runtime"
 
 # Health check for better container management
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
