@@ -140,44 +140,24 @@ COPY --from=erlang-builder --chown=root:root /opt/erlang /opt/erlang
 COPY --from=aws-builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
 COPY --from=aws-builder --chown=root:root /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
-# Set up toolbox and permissions
-COPY --from=tools-builder --chown=${USER}:${USER} /toolbox ${HOME}/.toolbox
+# Set up toolbox using your working approach
+COPY --from=tools-builder /toolbox /root/.toolbox
+RUN mkdir -p /home/${USER}/.toolbox \
+    && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
+    && chown -R ${USER}:${USER} /home/${USER}/.toolbox \
+    && echo '. /home/semaphore/.toolbox/libcheckout' >> /home/${USER}/.bashrc \
+    && echo '. /home/semaphore/.toolbox/libchecksum' >> /home/${USER}/.bashrc \
+    && chown ${USER}:${USER} /home/${USER}/.bashrc \
+    && ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
+    && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
+    && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
+    && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
+    && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results
+
+# Set permissions
 RUN chmod +x /opt/semaphore/agent /usr/local/bin/sem \
     && mkdir -p /opt/semaphore \
     && chown -R ${USER}:${USER} /opt/semaphore
-
-# Revert to the working approach with direct symlinks
-RUN chown ${USER}:${USER} ${HOME}/.toolbox \
-    && ln -sf ${HOME}/.toolbox/cache /usr/local/bin/cache \
-    && ln -sf ${HOME}/.toolbox/artifact /usr/local/bin/artifact \
-    && ln -sf ${HOME}/.toolbox/sem-context /usr/local/bin/sem-context \
-    && ln -sf ${HOME}/.toolbox/retry /usr/local/bin/retry \
-    && ln -sf ${HOME}/.toolbox/test-results /usr/local/bin/test-results
-
-# Set up proper shell environment - load libraries conditionally and safely
-RUN echo '# Semaphore Toolbox Environment' > ${HOME}/.bashrc \
-    && echo 'export SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"' >> ${HOME}/.bashrc \
-    && echo '# Source toolbox libraries conditionally' >> ${HOME}/.bashrc \
-    && echo 'if [ -f "${HOME}/.toolbox/libchecksum" ]; then' >> ${HOME}/.bashrc \
-    && echo '    source "${HOME}/.toolbox/libchecksum" 2>/dev/null || true' >> ${HOME}/.bashrc \
-    && echo 'fi' >> ${HOME}/.bashrc \
-    && echo '# Source libcheckout only when needed (not during shell initialization)' >> ${HOME}/.bashrc \
-    && echo 'load_checkout() {' >> ${HOME}/.bashrc \
-    && echo '    if [ -f "${HOME}/.toolbox/libcheckout" ]; then' >> ${HOME}/.bashrc \
-    && echo '        source "${HOME}/.toolbox/libcheckout" 2>/dev/null || true' >> ${HOME}/.bashrc \
-    && echo '    fi' >> ${HOME}/.bashrc \
-    && echo '}' >> ${HOME}/.bashrc \
-    && echo '# Create checkout wrapper function' >> ${HOME}/.bashrc \
-    && echo 'checkout() {' >> ${HOME}/.bashrc \
-    && echo '    load_checkout' >> ${HOME}/.bashrc \
-    && echo '    if declare -f checkout > /dev/null 2>&1; then' >> ${HOME}/.bashrc \
-    && echo '        command checkout "$@"' >> ${HOME}/.bashrc \
-    && echo '    else' >> ${HOME}/.bashrc \
-    && echo '        echo "checkout function not available" >&2' >> ${HOME}/.bashrc \
-    && echo '        return 1' >> ${HOME}/.bashrc \
-    && echo '    fi' >> ${HOME}/.bashrc \
-    && echo '}' >> ${HOME}/.bashrc \
-    && chown ${USER}:${USER} ${HOME}/.bashrc
 
 # Copy scripts with proper ownership
 COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
@@ -189,16 +169,12 @@ RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.la" -delete 2>/dev/null || true \
     && find /usr -name "*.pyc" -delete 2>/dev/null || true \
     && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
-    && rm -rf /usr/include 2>/dev/null || true
+    && rm -rf /usr/include 2>/dev/null || true \
+    && rm -rf /root/.toolbox
 
 # Switch to non-root user
 USER ${USER}
 WORKDIR ${HOME}
-
-# Verify toolbox setup is working correctly without triggering libcheckout
-RUN /bin/bash -c "source ~/.bashrc && echo 'Toolbox environment loaded successfully'" \
-    && ls -la ~/.toolbox/ \
-    && echo "Toolbox commands available via symlinks"
 
 # Health check for better container management
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
