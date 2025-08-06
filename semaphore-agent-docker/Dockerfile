@@ -140,6 +140,8 @@ COPY --from=erlang-builder --chown=root:root /opt/erlang /opt/erlang
 COPY --from=aws-builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
 COPY --from=aws-builder --chown=root:root /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
+RUN sed -i 's|/usr/local/bin/python3.11|/usr/bin/python3|' /usr/local/bin/aws
+
 # Set up toolbox using your working approach
 COPY --from=tools-builder /toolbox /root/.toolbox
 RUN mkdir -p /home/${USER}/.toolbox \
