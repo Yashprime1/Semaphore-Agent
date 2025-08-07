@@ -1,4 +1,6 @@
-# Stage 1: Build minimal Erlang from source
+#####################
+# 1. Build Erlang   #
+#####################
 FROM alpine:3.18 AS erlang-builder
 
 RUN apk add --no-cache --virtual .build-deps \
@@ -63,23 +65,25 @@ RUN apk add --no-cache --virtual .build-deps \
     && find /opt/erlang -type d -name "doc" -exec rm -rf {} + 2>/dev/null || true \
     && find /opt/erlang -name "*.beam" ! -path "*/ebin/*" -delete 2>/dev/null || true
 
-# Stage 2: Get AWS CLI (binary)
+#####################
+# 2. Build AWS CLI  #
+#####################
 FROM ubuntu:22.04 AS aws-builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl unzip \
-    && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
-    && unzip awscliv2.zip \
-    && ./aws/install \
-    && rm -rf awscliv2.zip aws \
-    && apt-get purge -y --auto-remove curl unzip ca-certificates \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && strip --strip-unneeded /usr/local/bin/aws /usr/local/bin/aws_completer 2>/dev/null || true \
-    && find /usr/local/aws-cli/v2 -type f -exec strip --strip-unneeded {} \; 2>/dev/null || true
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl unzip && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli && \
+    rm -rf awscliv2.zip aws && \
+    apt-get purge -y --auto-remove curl unzip ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Stage 3: Get Semaphore tools
+##########################
+# 3. Semaphore tools     #
+##########################
 FROM alpine:3.18 AS tools-builder
+
 RUN apk add --no-cache curl \
     && curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz \
     && strip --strip-unneeded sem 2>/dev/null || true \
@@ -87,29 +91,32 @@ RUN apk add --no-cache curl \
     && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /toolbox --strip-components=1 \
     && find /toolbox -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true
 
-# Stage 4: Extract the Semaphore agent
+###############################
+# 4. Semaphore Agent Artifact #
+###############################
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
 
-# Stage 5: Final optimized image using distroless-like approach
+#######################
+# 5. Final IMAGE      #
+#######################
 FROM ubuntu:22.04
 
-# Build args for better caching
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=UTC
 
+# Create Semaphore user first for layer caching
 ENV USER=semaphore
 ENV HOME=/home/${USER}
 ENV PATH="/opt/erlang/bin:/usr/local/aws-cli/v2/current:${PATH}"
 ENV BASH_ENV="${HOME}/.bashrc"
 ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 
-# Create user first for better layer caching
 RUN groupadd -g 1000 ${USER} \
     && useradd -u 1000 -g ${USER} -m -s /bin/bash ${USER}
 
-# Install packages including Python 3.13 and clean up in a single optimized layer
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+# Basic required tools and Python dependencies (note: lsb-release needed for deadsnakes PPA setup)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
         ca-certificates \
         git \
         openssh-client \
@@ -117,63 +124,33 @@ RUN apt-get update \
         jq \
         gnupg \
         software-properties-common \
+        lsb-release \
+        unzip \
         libc6 \
         libssl3 \
         libncurses6 \
         zlib1g \
-    && curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy main" > /etc/apt/sources.list.d/deadsnakes.list \
+        tzdata \
+    && curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | \
+        gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy main" \
+        > /etc/apt/sources.list.d/deadsnakes.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        python3.13 \
-        libpython3.13-stdlib \
-    && apt-get remove -y gnupg software-properties-common \
+    && apt-get install -y --no-install-recommends python3.13 libpython3.13-stdlib \
+    && apt-get remove -y gnupg software-properties-common lsb-release unzip \
     && apt-get autoremove -y \
-    && apt-get autoclean \
-    && rm -rf /var/lib/apt/lists/* \
-        /var/cache/apt/* \
-        /tmp/* \
-        /var/tmp/* \
-        /usr/share/doc \
-        /usr/share/man \
-        /usr/share/info \
-        /usr/share/locale \
-        /usr/share/pixmaps \
-        /usr/share/zoneinfo \
-        /usr/share/bug \
-        /usr/share/lintian \
-        /var/log/* \
-        /usr/lib/systemd \
-        /lib/systemd \
-        /var/lib/systemd \
-    && apt-get autoremove -y \
-    && apt-get autoclean \
-    && rm -rf /var/lib/apt/lists/* \
-        /var/cache/apt/* \
-        /tmp/* \
-        /var/tmp/* \
-        /usr/share/doc \
-        /usr/share/man \
-        /usr/share/info \
-        /usr/share/locale \
-        /usr/share/pixmaps \
-        /usr/share/zoneinfo \
-        /usr/share/bug \
-        /usr/share/lintian \
-        /var/log/* \
-        /usr/lib/systemd \
-        /lib/systemd \
-        /var/lib/systemd
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy binaries and set permissions in optimal order
+# Add Semaphore agent, Erlang, AWS CLI, and tools
 COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
-COPY --from=tools-builder --chown=root:root /sem /usr/local/bin/sem
 COPY --from=erlang-builder --chown=root:root /opt/erlang /opt/erlang
+COPY --from=tools-builder --chown=root:root /sem /usr/local/bin/sem
 COPY --from=aws-builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
 COPY --from=aws-builder --chown=root:root /usr/local/bin/aws_completer /usr/local/bin/aws_completer
 COPY --from=aws-builder --chown=root:root /usr/local/aws-cli /usr/local/aws-cli
 
-# Set up toolbox using your working approach
+# Toolbox setup
 COPY --from=tools-builder /toolbox /root/.toolbox
 RUN mkdir -p /home/${USER}/.toolbox \
     && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
@@ -188,18 +165,18 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
     && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results
 
-# Set permissions and ensure Python 3.13 is properly linked
+# Ensure permissions and do not strip Python or AWS CLI shared libraries!
 RUN chmod +x /opt/semaphore/agent /usr/local/bin/sem \
     && mkdir -p /opt/semaphore \
     && chown -R ${USER}:${USER} /opt/semaphore \
     && ldconfig
 
-# Copy scripts with proper ownership
+# Add your entrypoint and shutdown scripts (these must be in your build context)
 COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
 COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
-# Final aggressive cleanup in a single layer
+# Final safe cleanup: do NOT remove /usr/lib or Python shared libs!
 RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.la" -delete 2>/dev/null || true \
     && find /usr -name "*.pyc" -delete 2>/dev/null || true \
@@ -210,11 +187,9 @@ RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs \
     && rm -rf /usr/local/aws-cli/v2/current/dist/awscli/data
 
-# Switch to non-root user
 USER ${USER}
 WORKDIR ${HOME}
 
-# Health check for better container management
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD /opt/semaphore/agent --version > /dev/null || exit 1
 
