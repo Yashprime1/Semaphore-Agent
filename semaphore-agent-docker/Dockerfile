@@ -85,7 +85,7 @@ FROM semaphoreci/agent:v2.3.0 AS agent-extractor
 #######################
 # 4. Final IMAGE      #
 #######################
-FROM ubuntu:24.04
+FROM ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=UTC
@@ -97,10 +97,10 @@ ENV PATH="/opt/erlang/bin:/usr/local/bin:/usr/local/aws-cli/v2/current/bin:${PAT
 ENV BASH_ENV="${HOME}/.bashrc"
 ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 
-RUN groupadd -g 1080 ${USER} \
-    && useradd -u 1080 -g ${USER} -m -s /bin/bash ${USER}
+RUN groupadd -g 1000 ${USER} \
+    && useradd -u 1000 -g ${USER} -m -s /bin/bash ${USER}
 
-# LAYER 1: Essential system packages ONLY (small, rarely changes)
+# Install Python 3.13 and AWS CLI dependencies in one layer
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -108,41 +108,15 @@ RUN apt-get update && \
         openssh-client \
         curl \
         jq \
-        tzdata \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# LAYER 2: Python 3.13 RUNTIME ONLY (NO development files)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
         gnupg \
         software-properties-common \
         lsb-release \
-    && curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | \
-        gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy main" \
-        > /etc/apt/sources.list.d/deadsnakes.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        python3.13 \
-        libpython3.13-stdlib \
-        libpython3.13 \
-    && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
-    && ln -sf /usr/bin/python3.13 /usr/bin/python \
-    && apt-get remove -y gnupg software-properties-common lsb-release \
-    && apt-get autoremove -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && find /usr -name "*.pyc" -delete \
-    && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-
-# LAYER 3: Essential runtime libraries only
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+        unzip \
         libc6 \
         libssl3 \
         libncurses6 \
         zlib1g \
+        tzdata \
         libffi8 \
         libexpat1 \
         libbz2-1.0 \
@@ -150,47 +124,39 @@ RUN apt-get update && \
         libreadline8 \
         libsqlite3-0 \
         libuuid1 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# LAYER 4: OPTIMIZED AWS CLI (remove unnecessary components)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends unzip \
+    && curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | \
+        gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy main" \
+        > /etc/apt/sources.list.d/deadsnakes.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3.13 \
+        python3.13-dev \
+        libpython3.13-stdlib \
+        libpython3.13 \
     && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
     && ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
     && rm -rf awscliv2.zip aws \
-    && apt-get remove -y unzip \
+    && apt-get remove -y gnupg software-properties-common lsb-release unzip \
     && apt-get autoremove -y \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    # MAJOR CLEANUP: Remove AWS CLI bloat
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/awscli/examples \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/awscli/topics \
-    # Remove service definitions for unused services (keep only common ones)
-    && find /usr/local/aws-cli/v2/current/dist/awscli/botocore/data -name "service-2.json" \
-        ! -path "*/s3/*" \
-        ! -path "*/ec2/*" \
-        ! -path "*/iam/*" \
-        ! -path "*/sts/*" \
-        ! -path "*/lambda/*" \
-        ! -path "*/logs/*" \
-        ! -path "*/ecr/*" \
-        -delete \
-    # Remove the massive autocomplete index (saves 17MB)
-    && rm -f /usr/local/aws-cli/v2/current/dist/awscli/data/ac.index \
-    # Remove AWS CLI completer (saves 6MB) - optional if not needed
-    && rm -f /usr/local/bin/aws_completer
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symbolic link for python3
+RUN ln -sf /usr/bin/python3.13 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.13 /usr/bin/python
 
 # Add Semaphore agent, Erlang, and tools
 COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
 COPY --from=erlang-builder --chown=root:root /opt/erlang /opt/erlang
 COPY --from=tools-builder --chown=root:root /sem /usr/local/bin/sem
 
-# MAJOR OPTIMIZATION: Single toolbox copy instead of duplicate (saves 64MB)
-COPY --from=tools-builder /toolbox /home/${USER}/.toolbox
-RUN chown -R ${USER}:${USER} /home/${USER}/.toolbox \
+# Toolbox setup
+COPY --from=tools-builder /toolbox /root/.toolbox
+RUN mkdir -p /home/${USER}/.toolbox \
+    && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
+    && chown -R ${USER}:${USER} /home/${USER}/.toolbox \
     && chmod +x /home/${USER}/.toolbox/* \
     && echo '. /home/semaphore/.toolbox/libcheckout' >> /home/${USER}/.bashrc \
     && echo '. /home/semaphore/.toolbox/libchecksum' >> /home/${USER}/.bashrc \
@@ -212,19 +178,15 @@ COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
 COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
-# AGGRESSIVE CLEANUP
+# Final cleanup - be careful not to remove essential Python libraries
 RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.la" -delete 2>/dev/null || true \
-    # Remove Python development files if accidentally installed
-    && rm -rf /usr/lib/python3.13/config-* 2>/dev/null || true \
-    && rm -rf /usr/include/python3.13 2>/dev/null || true \
-    # Remove perl if it's not actually needed
-    && apt-get remove -y perl perl-modules-5.34 2>/dev/null || true \
-    && apt-get autoremove -y 2>/dev/null || true \
-    && apt-get remove -y python3.13-dev \
-    && rm -rf /usr/lib/python3.13/test \
-    && rm -rf /usr/lib/python3.13/unittest \
-    && find /usr/lib/python3.13 -name "*.pyc" -delete 
+    && find /usr -name "*.pyc" -delete 2>/dev/null || true \
+    && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
+    && rm -rf /root/.toolbox \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data 2>/dev/null || true \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/awscli/data 2>/dev/null || true
 
 USER ${USER}
 WORKDIR ${HOME}
