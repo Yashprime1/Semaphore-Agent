@@ -83,7 +83,7 @@ RUN apk add --no-cache curl \
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
 
 #######################
-# 4. Final IMAGE - OPTIMIZED      #
+# 4. Final IMAGE      #
 #######################
 FROM ubuntu:24.04
 
@@ -220,7 +220,11 @@ RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && rm -rf /usr/include/python3.13 2>/dev/null || true \
     # Remove perl if it's not actually needed
     && apt-get remove -y perl perl-modules-5.34 2>/dev/null || true \
-    && apt-get autoremove -y 2>/dev/null || true
+    && apt-get autoremove -y 2>/dev/null || true \
+    && apt-get remove -y python3.13-dev \
+    && rm -rf /usr/lib/python3.13/test \
+    && rm -rf /usr/lib/python3.13/unittest \
+    && find /usr/lib/python3.13 -name "*.pyc" -delete 
 
 USER ${USER}
 WORKDIR ${HOME}
