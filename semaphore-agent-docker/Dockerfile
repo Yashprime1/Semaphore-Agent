@@ -178,15 +178,13 @@ COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
 COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
-# Final cleanup - be careful not to remove essential Python libraries
+# Final cleanup - be careful not to remove essential Python libraries or AWS CLI data
 RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.la" -delete 2>/dev/null || true \
     && find /usr -name "*.pyc" -delete 2>/dev/null || true \
     && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
     && rm -rf /root/.toolbox \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data 2>/dev/null || true \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/awscli/data 2>/dev/null || true
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true
 
 USER ${USER}
 WORKDIR ${HOME}
