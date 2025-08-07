@@ -97,8 +97,8 @@ ENV PATH="/opt/erlang/bin:/usr/local/bin:/usr/local/aws-cli/v2/current/bin:${PAT
 ENV BASH_ENV="${HOME}/.bashrc"
 ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 
-RUN groupadd -g 1000 ${USER} \
-    && useradd -u 1000 -g ${USER} -m -s /bin/bash ${USER}
+RUN groupadd -g 1080 ${USER} \
+    && useradd -u 1080 -g ${USER} -m -s /bin/bash ${USER}
 
 # LAYER 1: Essential system packages ONLY (small, rarely changes)
 RUN apt-get update && \
