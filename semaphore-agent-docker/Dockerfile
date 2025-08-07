@@ -141,10 +141,8 @@ RUN apt-get update && \
     && apt-get remove -y gnupg software-properties-common lsb-release unzip \
     && apt-get autoremove -y \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create symbolic link for python3
-RUN ln -sf /usr/bin/python3.13 /usr/bin/python3 \
+    && rm -rf /var/cache/apt/archives /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
     && ln -sf /usr/bin/python3.13 /usr/bin/python
 
 # Add Semaphore agent, Erlang, and tools
@@ -165,10 +163,8 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
     && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
     && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
-    && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results
-
-# Ensure permissions and update library cache
-RUN chmod +x /opt/semaphore/agent /usr/local/bin/sem \
+    && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results \
+    && chmod +x /opt/semaphore/agent /usr/local/bin/sem \
     && mkdir -p /opt/semaphore \
     && chown -R ${USER}:${USER} /opt/semaphore \
     && ldconfig
@@ -188,8 +184,5 @@ RUN find /usr -name "*.a" -delete 2>/dev/null || true \
    
 USER ${USER}
 WORKDIR ${HOME}
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD /opt/semaphore/agent --version > /dev/null || exit 1
 
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
