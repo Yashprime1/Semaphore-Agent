@@ -65,22 +65,8 @@ RUN apk add --no-cache --virtual .build-deps \
     && find /opt/erlang -type d -name "doc" -exec rm -rf {} + 2>/dev/null || true \
     && find /opt/erlang -name "*.beam" ! -path "*/ebin/*" -delete 2>/dev/null || true
 
-#####################
-# 2. Build AWS CLI  #
-#####################
-FROM ubuntu:22.04 AS aws-builder
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates curl unzip && \
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli && \
-    rm -rf awscliv2.zip aws && \
-    apt-get purge -y --auto-remove curl unzip ca-certificates && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
 ##########################
-# 3. Semaphore tools     #
+# 2. Semaphore tools     #
 ##########################
 FROM alpine:3.18 AS tools-builder
 
@@ -92,12 +78,12 @@ RUN apk add --no-cache curl \
     && find /toolbox -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true
 
 ###############################
-# 4. Semaphore Agent Artifact #
+# 3. Semaphore Agent Artifact #
 ###############################
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
 
 #######################
-# 5. Final IMAGE      #
+# 4. Final IMAGE      #
 #######################
 FROM ubuntu:22.04
 
@@ -107,14 +93,14 @@ ARG TZ=UTC
 # Create Semaphore user first for layer caching
 ENV USER=semaphore
 ENV HOME=/home/${USER}
-ENV PATH="/opt/erlang/bin:/usr/local/aws-cli/v2/current:${PATH}"
+ENV PATH="/opt/erlang/bin:/usr/local/bin:/usr/local/aws-cli/v2/current/bin:${PATH}"
 ENV BASH_ENV="${HOME}/.bashrc"
 ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 
 RUN groupadd -g 1000 ${USER} \
     && useradd -u 1000 -g ${USER} -m -s /bin/bash ${USER}
 
-# Basic required tools and Python dependencies (note: lsb-release needed for deadsnakes PPA setup)
+# Install Python 3.13 and AWS CLI dependencies in one layer
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -131,24 +117,40 @@ RUN apt-get update && \
         libncurses6 \
         zlib1g \
         tzdata \
+        libffi8 \
+        libexpat1 \
+        libbz2-1.0 \
+        liblzma5 \
+        libreadline8 \
+        libsqlite3-0 \
+        libuuid1 \
     && curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | \
         gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy main" \
         > /etc/apt/sources.list.d/deadsnakes.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends python3.13 libpython3.13-stdlib \
+    && apt-get install -y --no-install-recommends \
+        python3.13 \
+        python3.13-dev \
+        libpython3.13-stdlib \
+        libpython3.13 \
+    && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+    && unzip awscliv2.zip \
+    && ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
+    && rm -rf awscliv2.zip aws \
     && apt-get remove -y gnupg software-properties-common lsb-release unzip \
     && apt-get autoremove -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Add Semaphore agent, Erlang, AWS CLI, and tools
+# Create symbolic link for python3
+RUN ln -sf /usr/bin/python3.13 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.13 /usr/bin/python
+
+# Add Semaphore agent, Erlang, and tools
 COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
 COPY --from=erlang-builder --chown=root:root /opt/erlang /opt/erlang
 COPY --from=tools-builder --chown=root:root /sem /usr/local/bin/sem
-COPY --from=aws-builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
-COPY --from=aws-builder --chown=root:root /usr/local/bin/aws_completer /usr/local/bin/aws_completer
-COPY --from=aws-builder --chown=root:root /usr/local/aws-cli /usr/local/aws-cli
 
 # Toolbox setup
 COPY --from=tools-builder /toolbox /root/.toolbox
@@ -165,27 +167,26 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
     && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results
 
-# Ensure permissions and do not strip Python or AWS CLI shared libraries!
+# Ensure permissions and update library cache
 RUN chmod +x /opt/semaphore/agent /usr/local/bin/sem \
     && mkdir -p /opt/semaphore \
     && chown -R ${USER}:${USER} /opt/semaphore \
     && ldconfig
 
-# Add your entrypoint and shutdown scripts (these must be in your build context)
+# Add your entrypoint and shutdown scripts
 COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
 COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
-# Final safe cleanup: do NOT remove /usr/lib or Python shared libs!
+# Final cleanup - be careful not to remove essential Python libraries
 RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.la" -delete 2>/dev/null || true \
     && find /usr -name "*.pyc" -delete 2>/dev/null || true \
     && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
-    && rm -rf /usr/include 2>/dev/null || true \
     && rm -rf /root/.toolbox \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/awscli/data
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data 2>/dev/null || true \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/awscli/data 2>/dev/null || true
 
 USER ${USER}
 WORKDIR ${HOME}
