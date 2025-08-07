@@ -85,7 +85,7 @@ FROM semaphoreci/agent:v2.3.0 AS agent-extractor
 #######################
 # 4. Final IMAGE      #
 #######################
-FROM ubuntu:22.04-slim
+FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=UTC
