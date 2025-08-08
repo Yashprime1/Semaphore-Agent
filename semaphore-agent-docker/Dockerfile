@@ -140,8 +140,8 @@ ENV PATH="/opt/erlang/bin:/usr/local/bin:/usr/local/aws-cli/v2/current/bin:${PAT
 ENV BASH_ENV="${HOME}/.bashrc"
 ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 
-RUN groupadd -g 1000 ${USER} \
-    && useradd -u 1000 -g ${USER} -m -s /bin/bash ${USER}
+RUN groupadd -g 1001 ${USER} 2>/dev/null || true \
+    && useradd -u 1001 -g ${USER} -m -s /bin/bash ${USER} 2>/dev/null || true
 
 # Install runtime dependencies only
 RUN apt-get update && \
