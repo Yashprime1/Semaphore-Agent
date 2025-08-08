@@ -21,7 +21,7 @@ RUN apt-get update && \
         software-properties-common \
     && rm -rf /var/lib/apt/lists/*
 
-# Build Erlang with aggressive optimizations
+# Build Erlang with ultra-aggressive optimizations
 RUN curl -fsSL https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz \
     && cd otp_src_26.2.5.2/ \
     && ./configure \
@@ -81,14 +81,19 @@ RUN curl -fsSL https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_
     && find /opt/erlang -type d -name "doc" -exec rm -rf {} + 2>/dev/null || true \
     && find /opt/erlang -name "*.beam" ! -path "*/ebin/*" -delete 2>/dev/null || true \
     && find /opt/erlang -name "*.a" -delete 2>/dev/null || true \
-    && find /opt/erlang -name "*.la" -delete 2>/dev/null || true
+    && find /opt/erlang -name "*.la" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.txt" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.md" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.html" -delete 2>/dev/null || true
 
 # Download and optimize Semaphore CLI and Toolbox
 RUN curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz \
     && strip --strip-unneeded sem 2>/dev/null || true \
     && mkdir -p /toolbox \
     && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /toolbox --strip-components=1 \
-    && find /toolbox -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true
+    && find /toolbox -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true \
+    && find /toolbox -name "*.txt" -delete 2>/dev/null || true \
+    && find /toolbox -name "*.md" -delete 2>/dev/null || true
 
 # Install Python 3.13 with minimal dependencies
 RUN curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | \
@@ -103,15 +108,21 @@ RUN curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA693236
     && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
     && ln -sf /usr/bin/python3.13 /usr/bin/python \
     && find /usr/lib/python3.13 -name "*.pyc" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    && find /usr/lib/python3.13 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
+    && find /usr/lib/python3.13 -name "*.txt" -delete 2>/dev/null || true \
+    && find /usr/lib/python3.13 -name "*.md" -delete 2>/dev/null || true \
+    && find /usr/lib/python3.13 -name "*.html" -delete 2>/dev/null || true
 
-# Install AWS CLI with cleanup
+# Install AWS CLI with aggressive cleanup
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
     && ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
     && rm -rf awscliv2.zip aws \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data 2>/dev/null || true
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/examples 2>/dev/null || true \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/tests 2>/dev/null || true \
+    && find /usr/local/aws-cli -name "*.txt" -delete 2>/dev/null || true \
+    && find /usr/local/aws-cli -name "*.md" -delete 2>/dev/null || true
 
 # Extract Semaphore agent from official image
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
@@ -134,7 +145,7 @@ ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 RUN groupadd -g 1001 ${USER} 2>/dev/null || true \
     && useradd -u 1001 -g ${USER} -m -s /bin/bash ${USER} 2>/dev/null || true
 
-# Install only essential runtime dependencies including Python
+# Install only essential runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -160,7 +171,11 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/cache/apt/archives /var/lib/apt/lists/* \
     && rm -rf /usr/share/doc /usr/share/man /usr/share/locale \
-    && rm -rf /var/cache/apt /var/lib/apt/lists/*
+    && rm -rf /var/cache/apt /var/lib/apt/lists/* \
+    && rm -rf /usr/share/lintian /usr/share/bug \
+    && rm -rf /usr/share/groff /usr/share/info \
+    && rm -rf /usr/share/linda /usr/share/locale \
+    && rm -rf /usr/share/zoneinfo /usr/share/calendar
 
 # Copy optimized binaries from builder stage
 COPY --from=builder --chown=root:root /opt/erlang /opt/erlang
@@ -196,7 +211,7 @@ COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
 COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
-# Aggressive final cleanup
+# Ultra-aggressive final cleanup
 RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.la" -delete 2>/dev/null || true \
     && find /usr -name "*.pyc" -delete 2>/dev/null || true \
@@ -206,14 +221,31 @@ RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.html" -delete 2>/dev/null || true \
     && find /usr -name "*.css" -delete 2>/dev/null || true \
     && find /usr -name "*.js" -delete 2>/dev/null || true \
+    && find /usr -name "*.xml" -delete 2>/dev/null || true \
+    && find /usr -name "*.json" -delete 2>/dev/null || true \
+    && find /usr -name "*.yml" -delete 2>/dev/null || true \
+    && find /usr -name "*.yaml" -delete 2>/dev/null || true \
+    && find /usr -name "*.example" -delete 2>/dev/null || true \
+    && find /usr -name "*.sample" -delete 2>/dev/null || true \
     && rm -rf /root/.toolbox \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data 2>/dev/null || true \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/examples 2>/dev/null || true \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/tests 2>/dev/null || true \
     && rm -rf /usr/share/locale \
     && rm -rf /usr/share/doc \
     && rm -rf /usr/share/man \
+    && rm -rf /usr/share/info \
+    && rm -rf /usr/share/lintian \
+    && rm -rf /usr/share/bug \
+    && rm -rf /usr/share/groff \
+    && rm -rf /usr/share/linda \
+    && rm -rf /usr/share/zoneinfo \
+    && rm -rf /usr/share/calendar \
     && rm -rf /tmp/* \
-    && rm -rf /var/tmp/*
+    && rm -rf /var/tmp/* \
+    && rm -rf /var/cache/* \
+    && rm -rf /var/lib/apt/lists/*
 
 USER ${USER}
 WORKDIR ${HOME}
