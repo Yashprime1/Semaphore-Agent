@@ -21,7 +21,7 @@ RUN apt-get update && \
         software-properties-common \
     && rm -rf /var/lib/apt/lists/*
 
-# Build Erlang with ultra-aggressive optimizations
+# Build Erlang with ultra-minimal configuration
 RUN curl -fsSL https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz \
     && cd otp_src_26.2.5.2/ \
     && ./configure \
@@ -70,6 +70,8 @@ RUN curl -fsSL https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_
         --without-edoc \
         --enable-shared-zlib \
         --enable-static-drivers \
+        --disable-dynamic-ssl-libs \
+        --disable-shared \
     && make -j$(nproc) \
     && make install \
     && cd .. \
@@ -84,7 +86,44 @@ RUN curl -fsSL https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_
     && find /opt/erlang -name "*.la" -delete 2>/dev/null || true \
     && find /opt/erlang -name "*.txt" -delete 2>/dev/null || true \
     && find /opt/erlang -name "*.md" -delete 2>/dev/null || true \
-    && find /opt/erlang -name "*.html" -delete 2>/dev/null || true
+    && find /opt/erlang -name "*.html" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.erl" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.hrl" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.app.src" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.appup.src" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.rel.src" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.script.src" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.config.src" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.mk" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "Makefile*" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "configure*" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.in" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.ac" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.am" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.m4" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.sh" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.bat" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.cmd" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.pl" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.py" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.rb" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.js" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.css" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.xml" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.json" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.yml" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.yaml" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.example" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.sample" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.template" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.orig" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.bak" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.tmp" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.swp" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.swo" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*~" -delete 2>/dev/null || true \
+    && find /opt/erlang -name ".DS_Store" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "Thumbs.db" -delete 2>/dev/null || true
 
 # Download and optimize Semaphore CLI and Toolbox
 RUN curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz \
@@ -93,7 +132,14 @@ RUN curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_
     && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /toolbox --strip-components=1 \
     && find /toolbox -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true \
     && find /toolbox -name "*.txt" -delete 2>/dev/null || true \
-    && find /toolbox -name "*.md" -delete 2>/dev/null || true
+    && find /toolbox -name "*.md" -delete 2>/dev/null || true \
+    && find /toolbox -name "*.html" -delete 2>/dev/null || true \
+    && find /toolbox -name "*.css" -delete 2>/dev/null || true \
+    && find /toolbox -name "*.js" -delete 2>/dev/null || true \
+    && find /toolbox -name "*.xml" -delete 2>/dev/null || true \
+    && find /toolbox -name "*.json" -delete 2>/dev/null || true \
+    && find /toolbox -name "*.yml" -delete 2>/dev/null || true \
+    && find /toolbox -name "*.yaml" -delete 2>/dev/null || true
 
 # Install Python 3.13 with minimal dependencies
 RUN curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | \
@@ -111,7 +157,13 @@ RUN curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA693236
     && find /usr/lib/python3.13 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
     && find /usr/lib/python3.13 -name "*.txt" -delete 2>/dev/null || true \
     && find /usr/lib/python3.13 -name "*.md" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "*.html" -delete 2>/dev/null || true
+    && find /usr/lib/python3.13 -name "*.html" -delete 2>/dev/null || true \
+    && find /usr/lib/python3.13 -name "*.css" -delete 2>/dev/null || true \
+    && find /usr/lib/python3.13 -name "*.js" -delete 2>/dev/null || true \
+    && find /usr/lib/python3.13 -name "*.xml" -delete 2>/dev/null || true \
+    && find /usr/lib/python3.13 -name "*.json" -delete 2>/dev/null || true \
+    && find /usr/lib/python3.13 -name "*.yml" -delete 2>/dev/null || true \
+    && find /usr/lib/python3.13 -name "*.yaml" -delete 2>/dev/null || true
 
 # Install AWS CLI with aggressive cleanup
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
@@ -122,7 +174,14 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/examples 2>/dev/null || true \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/tests 2>/dev/null || true \
     && find /usr/local/aws-cli -name "*.txt" -delete 2>/dev/null || true \
-    && find /usr/local/aws-cli -name "*.md" -delete 2>/dev/null || true
+    && find /usr/local/aws-cli -name "*.md" -delete 2>/dev/null || true \
+    && find /usr/local/aws-cli -name "*.html" -delete 2>/dev/null || true \
+    && find /usr/local/aws-cli -name "*.css" -delete 2>/dev/null || true \
+    && find /usr/local/aws-cli -name "*.js" -delete 2>/dev/null || true \
+    && find /usr/local/aws-cli -name "*.xml" -delete 2>/dev/null || true \
+    && find /usr/local/aws-cli -name "*.json" -delete 2>/dev/null || true \
+    && find /usr/local/aws-cli -name "*.yml" -delete 2>/dev/null || true \
+    && find /usr/local/aws-cli -name "*.yaml" -delete 2>/dev/null || true
 
 # Extract Semaphore agent from official image
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
@@ -145,7 +204,7 @@ ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 RUN groupadd -g 1001 ${USER} 2>/dev/null || true \
     && useradd -u 1001 -g ${USER} -m -s /bin/bash ${USER} 2>/dev/null || true
 
-# Install only essential runtime dependencies
+# Install only essential runtime dependencies including Python
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -168,6 +227,8 @@ RUN apt-get update && \
         procps \
         python3 \
         python3-minimal \
+        libpython3-stdlib \
+        libpython3-minimal \
     && apt-get clean \
     && rm -rf /var/cache/apt/archives /var/lib/apt/lists/* \
     && rm -rf /usr/share/doc /usr/share/man /usr/share/locale \
@@ -227,9 +288,17 @@ RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.yaml" -delete 2>/dev/null || true \
     && find /usr -name "*.example" -delete 2>/dev/null || true \
     && find /usr -name "*.sample" -delete 2>/dev/null || true \
+    && find /usr -name "*.template" -delete 2>/dev/null || true \
+    && find /usr -name "*.orig" -delete 2>/dev/null || true \
+    && find /usr -name "*.bak" -delete 2>/dev/null || true \
+    && find /usr -name "*.tmp" -delete 2>/dev/null || true \
+    && find /usr -name "*.swp" -delete 2>/dev/null || true \
+    && find /usr -name "*.swo" -delete 2>/dev/null || true \
+    && find /usr -name "*~" -delete 2>/dev/null || true \
+    && find /usr -name ".DS_Store" -delete 2>/dev/null || true \
+    && find /usr -name "Thumbs.db" -delete 2>/dev/null || true \
     && rm -rf /root/.toolbox \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data 2>/dev/null || true \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/examples 2>/dev/null || true \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/tests 2>/dev/null || true \
     && rm -rf /usr/share/locale \
