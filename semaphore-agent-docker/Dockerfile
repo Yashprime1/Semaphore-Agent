@@ -5,7 +5,7 @@ FROM ubuntu:24.04 AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Install build dependencies
+# Install minimal build dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -15,27 +15,13 @@ RUN apt-get update && \
         libssl-dev \
         zlib1g-dev \
         perl \
-        git \
         ca-certificates \
         unzip \
-        jq \
         gnupg \
         software-properties-common \
-        lsb-release \
-        libc6 \
-        libssl3 \
-        libncurses6 \
-        zlib1g \
-        tzdata \
-        libffi8 \
-        libexpat1 \
-        libbz2-1.0 \
-        liblzma5 \
-        libreadline8 \
-        libsqlite3-0 \
-        libuuid1
+    && rm -rf /var/lib/apt/lists/*
 
-# Build Erlang
+# Build Erlang with aggressive optimizations
 RUN curl -fsSL https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz \
     && cd otp_src_26.2.5.2/ \
     && ./configure \
@@ -93,34 +79,39 @@ RUN curl -fsSL https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_
     && find /opt/erlang -type d -name "src" -exec rm -rf {} + 2>/dev/null || true \
     && find /opt/erlang -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true \
     && find /opt/erlang -type d -name "doc" -exec rm -rf {} + 2>/dev/null || true \
-    && find /opt/erlang -name "*.beam" ! -path "*/ebin/*" -delete 2>/dev/null || true
+    && find /opt/erlang -name "*.beam" ! -path "*/ebin/*" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.a" -delete 2>/dev/null || true \
+    && find /opt/erlang -name "*.la" -delete 2>/dev/null || true
 
-# Download Semaphore CLI and Toolbox
+# Download and optimize Semaphore CLI and Toolbox
 RUN curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz \
     && strip --strip-unneeded sem 2>/dev/null || true \
     && mkdir -p /toolbox \
     && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /toolbox --strip-components=1 \
     && find /toolbox -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true
 
-# Install Python 3.13
+# Install Python 3.13 with minimal dependencies
 RUN curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | \
         gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu noble main" \
         > /etc/apt/sources.list.d/deadsnakes.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        python3.13 \
-        python3.13-dev \
+        python3.13-minimal \
         libpython3.13-stdlib \
-        libpython3.13 \
+        libpython3.13-minimal \
     && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
-    && ln -sf /usr/bin/python3.13 /usr/bin/python
+    && ln -sf /usr/bin/python3.13 /usr/bin/python \
+    && find /usr/lib/python3.13 -name "*.pyc" -delete 2>/dev/null || true \
+    && find /usr/lib/python3.13 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
-# Install AWS CLI
+# Install AWS CLI with cleanup
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
     && ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
-    && rm -rf awscliv2.zip aws
+    && rm -rf awscliv2.zip aws \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data 2>/dev/null || true
 
 # Extract Semaphore agent from official image
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
@@ -143,7 +134,7 @@ ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 RUN groupadd -g 1001 ${USER} 2>/dev/null || true \
     && useradd -u 1001 -g ${USER} -m -s /bin/bash ${USER} 2>/dev/null || true
 
-# Install runtime dependencies only
+# Install only essential runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -163,10 +154,13 @@ RUN apt-get update && \
         libreadline8 \
         libsqlite3-0 \
         libuuid1 \
+        procps \
     && apt-get clean \
-    && rm -rf /var/cache/apt/archives /var/lib/apt/lists/*
+    && rm -rf /var/cache/apt/archives /var/lib/apt/lists/* \
+    && rm -rf /usr/share/doc /usr/share/man /usr/share/locale \
+    && rm -rf /var/cache/apt /var/lib/apt/lists/*
 
-# Copy all binaries and tools from builder stage
+# Copy optimized binaries from builder stage
 COPY --from=builder --chown=root:root /opt/erlang /opt/erlang
 COPY --from=builder --chown=root:root /sem /usr/local/bin/sem
 COPY --from=builder --chown=root:root /toolbox /root/.toolbox
@@ -204,13 +198,24 @@ COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
 COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
-# Final cleanup
+# Aggressive final cleanup
 RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.la" -delete 2>/dev/null || true \
     && find /usr -name "*.pyc" -delete 2>/dev/null || true \
     && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
+    && find /usr -name "*.txt" -delete 2>/dev/null || true \
+    && find /usr -name "*.md" -delete 2>/dev/null || true \
+    && find /usr -name "*.html" -delete 2>/dev/null || true \
+    && find /usr -name "*.css" -delete 2>/dev/null || true \
+    && find /usr -name "*.js" -delete 2>/dev/null || true \
     && rm -rf /root/.toolbox \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data 2>/dev/null || true \
+    && rm -rf /usr/share/locale \
+    && rm -rf /usr/share/doc \
+    && rm -rf /usr/share/man \
+    && rm -rf /tmp/* \
+    && rm -rf /var/tmp/*
 
 USER ${USER}
 WORKDIR ${HOME}
