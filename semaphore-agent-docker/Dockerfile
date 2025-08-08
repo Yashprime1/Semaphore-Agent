@@ -134,7 +134,7 @@ ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 RUN groupadd -g 1001 ${USER} 2>/dev/null || true \
     && useradd -u 1001 -g ${USER} -m -s /bin/bash ${USER} 2>/dev/null || true
 
-# Install only essential runtime dependencies
+# Install only essential runtime dependencies including Python
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -155,6 +155,11 @@ RUN apt-get update && \
         libsqlite3-0 \
         libuuid1 \
         procps \
+        python3.13-minimal \
+        libpython3.13-stdlib \
+        libpython3.13-minimal \
+    && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.13 /usr/bin/python \
     && apt-get clean \
     && rm -rf /var/cache/apt/archives /var/lib/apt/lists/* \
     && rm -rf /usr/share/doc /usr/share/man /usr/share/locale \
@@ -165,10 +170,6 @@ COPY --from=builder --chown=root:root /opt/erlang /opt/erlang
 COPY --from=builder --chown=root:root /sem /usr/local/bin/sem
 COPY --from=builder --chown=root:root /toolbox /root/.toolbox
 COPY --from=builder --chown=root:root /usr/local/aws-cli /usr/local/aws-cli
-COPY --from=builder --chown=root:root /usr/bin/python3.13 /usr/bin/python3.13
-COPY --from=builder --chown=root:root /usr/bin/python3 /usr/bin/python3
-COPY --from=builder --chown=root:root /usr/bin/python /usr/bin/python
-COPY --from=builder --chown=root:root /usr/lib/python3.13 /usr/lib/python3.13
 COPY --from=builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
 COPY --from=builder --chown=root:root /usr/local/bin/aws_completer /usr/local/bin/aws_completer
 
