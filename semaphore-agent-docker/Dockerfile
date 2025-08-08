@@ -155,11 +155,8 @@ RUN apt-get update && \
         libsqlite3-0 \
         libuuid1 \
         procps \
-        python3.13-minimal \
-        libpython3.13-stdlib \
-        libpython3.13-minimal \
-    && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
-    && ln -sf /usr/bin/python3.13 /usr/bin/python \
+        python3 \
+        python3-minimal \
     && apt-get clean \
     && rm -rf /var/cache/apt/archives /var/lib/apt/lists/* \
     && rm -rf /usr/share/doc /usr/share/man /usr/share/locale \
