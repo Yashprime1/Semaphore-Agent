@@ -141,16 +141,21 @@ RUN curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_
     && find /toolbox -name "*.yml" -delete 2>/dev/null || true \
     && find /toolbox -name "*.yaml" -delete 2>/dev/null || true
 
-# Install Python 3.13 with minimal dependencies
+# Install Python 3.13 with full shared library support
 RUN curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | \
         gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu noble main" \
         > /etc/apt/sources.list.d/deadsnakes.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
+        python3.13 \
         python3.13-minimal \
-        libpython3.13-stdlib \
+        python3.13-dev \
+        libpython3.13 \
         libpython3.13-minimal \
+        libpython3.13-stdlib \
+        libpython3.13-dev \
+    && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
     && ln -sf /usr/bin/python3.13 /usr/bin/python \
     && find /usr/lib/python3.13 -name "*.pyc" -delete 2>/dev/null || true \
@@ -204,7 +209,7 @@ ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 RUN groupadd -g 1001 ${USER} 2>/dev/null || true \
     && useradd -u 1001 -g ${USER} -m -s /bin/bash ${USER} 2>/dev/null || true
 
-# Install only essential runtime dependencies including Python
+# Install only essential runtime dependencies with correct Python 3.12 packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -225,10 +230,6 @@ RUN apt-get update && \
         libsqlite3-0 \
         libuuid1 \
         procps \
-        python3 \
-        python3-minimal \
-        libpython3-stdlib \
-        libpython3-minimal \
     && apt-get clean \
     && rm -rf /var/cache/apt/archives /var/lib/apt/lists/* \
     && rm -rf /usr/share/doc /usr/share/man /usr/share/locale \
@@ -245,6 +246,16 @@ COPY --from=builder --chown=root:root /toolbox /root/.toolbox
 COPY --from=builder --chown=root:root /usr/local/aws-cli /usr/local/aws-cli
 COPY --from=builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
 COPY --from=builder --chown=root:root /usr/local/bin/aws_completer /usr/local/bin/aws_completer
+
+# Copy Python 3.13 from builder stage with all required libraries
+COPY --from=builder --chown=root:root /usr/bin/python3.13 /usr/bin/python3.13
+COPY --from=builder --chown=root:root /usr/lib/python3.13 /usr/lib/python3.13
+COPY --from=builder --chown=root:root /usr/lib/x86_64-linux-gnu/libpython3.13.so* /usr/lib/x86_64-linux-gnu/
+COPY --from=builder --chown=root:root /usr/include/python3.13 /usr/include/python3.13
+
+# Create Python symlinks
+RUN ln -sf /usr/bin/python3.13 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.13 /usr/bin/python
 
 # Copy Semaphore agent
 COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
