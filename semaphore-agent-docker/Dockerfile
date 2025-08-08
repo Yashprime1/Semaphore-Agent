@@ -141,7 +141,7 @@ RUN curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_
     && find /toolbox -name "*.yml" -delete 2>/dev/null || true \
     && find /toolbox -name "*.yaml" -delete 2>/dev/null || true
 
-# Install Python 3.13 with full shared library support
+# Install Python 3.13 with full shared library support and create consolidated python dir
 RUN curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | \
         gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu noble main" \
@@ -156,19 +156,15 @@ RUN curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA693236
         libpython3.13-stdlib \
         libpython3.13-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
-    && ln -sf /usr/bin/python3.13 /usr/bin/python \
-    && find /usr/lib/python3.13 -name "*.pyc" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "*.txt" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "*.md" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "*.html" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "*.css" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "*.js" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "*.xml" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "*.json" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "*.yml" -delete 2>/dev/null || true \
-    && find /usr/lib/python3.13 -name "*.yaml" -delete 2>/dev/null || true
+    && mkdir -p /opt/python3.13 \
+    && cp -r /usr/bin/python3.13* /opt/python3.13/ 2>/dev/null || true \
+    && cp -r /usr/lib/python3.13 /opt/python3.13/lib 2>/dev/null || true \
+    && mkdir -p /opt/python3.13/shared-libs \
+    && find /usr/lib -name "*python3.13*" -exec cp {} /opt/python3.13/shared-libs/ \; 2>/dev/null || true \
+    && find /usr/lib/x86_64-linux-gnu -name "*python3.13*" -exec cp {} /opt/python3.13/shared-libs/ \; 2>/dev/null || true \
+    && cp -r /usr/include/python3.13* /opt/python3.13/include 2>/dev/null || true \
+    && find /opt/python3.13 -name "*.pyc" -delete 2>/dev/null || true \
+    && find /opt/python3.13 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # Install AWS CLI with aggressive cleanup
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
@@ -209,7 +205,7 @@ ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 RUN groupadd -g 1001 ${USER} 2>/dev/null || true \
     && useradd -u 1001 -g ${USER} -m -s /bin/bash ${USER} 2>/dev/null || true
 
-# Install only essential runtime dependencies with correct Python 3.12 packages
+# Install only essential runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -247,15 +243,18 @@ COPY --from=builder --chown=root:root /usr/local/aws-cli /usr/local/aws-cli
 COPY --from=builder --chown=root:root /usr/local/bin/aws /usr/local/bin/aws
 COPY --from=builder --chown=root:root /usr/local/bin/aws_completer /usr/local/bin/aws_completer
 
-# Copy Python 3.13 from builder stage with all required libraries
-COPY --from=builder --chown=root:root /usr/bin/python3.13 /usr/bin/python3.13
-COPY --from=builder --chown=root:root /usr/lib/python3.13 /usr/lib/python3.13
-COPY --from=builder --chown=root:root /usr/lib/x86_64-linux-gnu/libpython3.13.so* /usr/lib/x86_64-linux-gnu/
-COPY --from=builder --chown=root:root /usr/include/python3.13 /usr/include/python3.13
+# Copy consolidated Python 3.13 installation
+COPY --from=builder --chown=root:root /opt/python3.13 /opt/python3.13
 
-# Create Python symlinks
-RUN ln -sf /usr/bin/python3.13 /usr/bin/python3 \
-    && ln -sf /usr/bin/python3.13 /usr/bin/python
+# Setup Python in the final image
+RUN cp /opt/python3.13/python3.13* /usr/local/bin/ 2>/dev/null || true \
+    && cp -r /opt/python3.13/lib /usr/local/lib/python3.13 2>/dev/null || true \
+    && cp /opt/python3.13/shared-libs/* /usr/local/lib/ 2>/dev/null || true \
+    && cp /opt/python3.13/shared-libs/* /usr/lib/x86_64-linux-gnu/ 2>/dev/null || true \
+    && cp -r /opt/python3.13/include /usr/local/include/python3.13 2>/dev/null || true \
+    && ln -sf /usr/local/bin/python3.13 /usr/local/bin/python3 \
+    && ln -sf /usr/local/bin/python3.13 /usr/local/bin/python \
+    && ldconfig
 
 # Copy Semaphore agent
 COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
@@ -275,8 +274,7 @@ RUN mkdir -p /home/${USER}/.toolbox \
     && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results \
     && chmod +x /opt/semaphore/agent /usr/local/bin/sem \
     && mkdir -p /opt/semaphore \
-    && chown -R ${USER}:${USER} /opt/semaphore \
-    && ldconfig
+    && chown -R ${USER}:${USER} /opt/semaphore
 
 # Add entrypoint and shutdown scripts
 COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
@@ -309,6 +307,7 @@ RUN find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name ".DS_Store" -delete 2>/dev/null || true \
     && find /usr -name "Thumbs.db" -delete 2>/dev/null || true \
     && rm -rf /root/.toolbox \
+    && rm -rf /opt/python3.13 \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/examples 2>/dev/null || true \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/tests 2>/dev/null || true \
