@@ -107,6 +107,28 @@ echo 'export PATH=/opt/amazon-corretto-11.0.19.7.1-linux-x64/bin:/opt/apache-mav
 
 echo "Add private key to semaphore home directory"
 echo "export MAVEN_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
+
+# Configure GRUB for systemd cgroup compatibility
+echo "Configuring GRUB for systemd cgroup compatibility..."
+if [ -f /etc/default/grub ]; then
+    # Backup original grub configuration
+    cp /etc/default/grub /etc/default/grub.backup.$(date +%Y%m%d_%H%M%S)
+    
+    # Update GRUB_CMDLINE_LINUX_DEFAULT with cgroup parameters
+    sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="[^"]*/& systemd.unified_cgroup_hierarchy=0 SYSTEMD_CGROUP_ENABLE_LEGACY_FORCE=1/' /etc/default/grub
+    
+    # If the parameter doesn't exist, add it
+    if ! grep -q "GRUB_CMDLINE_LINUX_DEFAULT.*systemd.unified_cgroup_hierarchy=0" /etc/default/grub; then
+        sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash systemd.unified_cgroup_hierarchy=0 SYSTEMD_CGROUP_ENABLE_LEGACY_FORCE=1 /' /etc/default/grub
+    fi
+    
+    # Update GRUB
+    update-grub
+    echo "GRUB configuration updated successfully"
+else
+    echo "Warning: /etc/default/grub not found, GRUB configuration not updated"
+fi
+
 # Source the environment and create override
 source /etc/profile.d/semaphore.sh
 sudo tee /etc/systemd/system/semaphore-agent.service.d/environment.conf << EOF
