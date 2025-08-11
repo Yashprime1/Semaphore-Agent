@@ -17,7 +17,7 @@ jobs:
       - name: Checkout agent-aws-stack repo
         uses: actions/checkout@v4
         with:
-          repository: renderedtext/agent-aws-stack
+          repository: Yashprime1/agent-aws-stack
           ref: v0.4.0
           show-progress: 'false'
 
