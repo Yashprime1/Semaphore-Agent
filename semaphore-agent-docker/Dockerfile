@@ -83,8 +83,6 @@ COPY --from=builder /usr/local/aws-cli /usr/local/aws-cli
 COPY --from=builder /usr/local/bin/aws /usr/local/bin/aws
 COPY --from=builder /usr/local/bin/aws_completer /usr/local/bin/aws_completer
 
-# Copy Semaphore agent (replace with your own source)
-COPY --######################################
 # 1️⃣ Builder Stage
 ######################################
 FROM debian:bookworm AS builder
