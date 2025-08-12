@@ -168,19 +168,8 @@ COPY --from=builder /usr/local/aws-cli /usr/local/aws-cli
 COPY --from=builder /usr/local/bin/aws /usr/local/bin/aws
 COPY --from=builder /usr/local/bin/aws_completer /usr/local/bin/aws_completer
 
-# Copy Semaphore agent (replace with your own source)
+# Copy Semaphore agent 
 COPY --from=agent-extractor /opt/semaphore/agent /opt/semaphore/agent
-
-# Scripts
-COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
-COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
-RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh \
-    && chown -R ${USER}:${USER} /home/semaphore /opt/semaphore
-
-USER ${USER}
-WORKDIR ${HOME}
-ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
- /opt/semaphore/agent /opt/semaphore/agent
 
 # Scripts
 COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
