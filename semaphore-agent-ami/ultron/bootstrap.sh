@@ -124,6 +124,13 @@ if [ -f /etc/default/grub ]; then
     
     # Update GRUB
     update-grub
+    sync  # Force filesystem sync
+    sleep 2  # Brief delay
+
+    # Verify the configuration was applied
+    if ! grep -q "systemd.unified_cgroup_hierarchy=0" /boot/grub/grub.cfg; then
+        echo "Warning: GRUB configuration may not have applied correctly"
+    fi
     echo "GRUB configuration updated successfully"
 else
     echo "Warning: /etc/default/grub not found, GRUB configuration not updated"
