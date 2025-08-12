@@ -60,7 +60,6 @@ RUN mkdir -p /opt/runtime-libs && \
     echo "==== Runtime binaries ====" && cat /tmp/bin_list.txt && \
     echo "==== Runtime libs ====" && cat /tmp/libdeps.txt
 
-FROM semaphoreci/agent:v2.3.0 AS agent-extractor
 ######################################
 # 2️⃣ Final Runtime Stage
 ######################################
