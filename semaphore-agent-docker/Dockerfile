@@ -7,13 +7,6 @@ ENV TZ=UTC
 
 # Install essential packages and Erlang from Ubuntu repositories
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    gnupg \
-    lsb-release \
-    && curl -fsSL https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb -o erlang-solutions_2.0_all.deb \
-    && dpkg -i erlang-solutions_2.0_all.deb \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
     curl \
@@ -21,6 +14,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     jq \
     unzip \
+    software-properties-common \
+    gnupg \
+    lsb-release \
+    && curl -fsSL https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb -o erlang-solutions_2.0_all.deb \
+    && dpkg -i erlang-solutions_2.0_all.deb \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
     # Erlang from Ubuntu repos (much smaller than building from source)
     erlang \
     erlang-crypto \
