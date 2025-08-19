@@ -14,11 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     jq \
     unzip \
-    software-properties-common \
-    gnupg \
-    lsb-release \
-    && curl -fsSL https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb -o erlang-solutions_2.0_all.deb \
-    && dpkg -i erlang-solutions_2.0_all.deb \
+    # Enable universe repository for additional packages
+    && apt-get install -y software-properties-common \
+    && add-apt-repository universe \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
     # Erlang from Ubuntu repos (much smaller than building from source)
@@ -46,11 +44,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreadline8 \
     libsqlite3-0 \
     libuuid1 \
-    && apt-get remove -y software-properties-common gnupg lsb-release \
+    && apt-get remove -y software-properties-common \
     && apt-get autoremove -y \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -f erlang-solutions_2.0_all.deb
+    && rm -rf /var/lib/apt/lists/*
 
 # Install AWS CLI v2
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
