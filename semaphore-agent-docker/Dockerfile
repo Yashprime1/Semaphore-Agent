@@ -7,6 +7,13 @@ ENV TZ=UTC
 
 # Install essential packages and Erlang from Ubuntu repositories
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    gnupg \
+    lsb-release \
+    && curl -fsSL https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb -o erlang-solutions_2.0_all.deb \
+    && dpkg -i erlang-solutions_2.0_all.deb \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
     curl \
@@ -23,10 +30,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     erlang-ssl \
     erlang-public-key \
     erlang-asn1 \
-    erlang-sasl \
-    erlang-stdlib \
-    erlang-kernel \
-    erlang-compiler \
     # AWS CLI dependencies
     python3 \
     python3-pip \
@@ -43,8 +46,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreadline8 \
     libsqlite3-0 \
     libuuid1 \
+    && apt-get remove -y software-properties-common gnupg lsb-release \
+    && apt-get autoremove -y \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f erlang-solutions_2.0_all.deb
 
 # Install AWS CLI v2
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
