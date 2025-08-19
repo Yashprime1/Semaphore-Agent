@@ -64,6 +64,13 @@ RUN mkdir -p /opt/toolbox \
 # Extract agent from semaphoreci/agent image
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
 
+# Final stage - copy everything we need
+FROM ubuntu:24.04 AS final
+
+# Set environment variables to avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
 # Copy agent from extractor stage
 COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
 
