@@ -1,5 +1,10 @@
-# Ultra-minimal semaphore agent image with Ubuntu 24.04
-FROM ubuntu:24.04
+# Multi-stage build for ultra-minimal semaphore agent image
+
+# Extract agent from semaphoreci/agent image
+FROM semaphoreci/agent:v2.3.0 AS agent-extractor
+
+# Final stage - create minimal runtime image
+FROM ubuntu:24.04 AS final
 
 # Set environment variables to avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -60,16 +65,6 @@ RUN curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_
 RUN mkdir -p /opt/toolbox \
     && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /opt/toolbox --strip-components=1 \
     && chmod +x /opt/toolbox/*
-
-# Extract agent from semaphoreci/agent image
-FROM semaphoreci/agent:v2.3.0 AS agent-extractor
-
-# Final stage - copy everything we need
-FROM ubuntu:24.04 AS final
-
-# Set environment variables to avoid interactive prompts
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=UTC
 
 # Copy agent from extractor stage
 COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
