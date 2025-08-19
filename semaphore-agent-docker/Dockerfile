@@ -1,11 +1,11 @@
-# Multi-stage build for ultra-minimal semaphore agent image
-FROM ubuntu:24.04 AS base
+# Ultra-minimal semaphore agent image with Ubuntu 24.04
+FROM ubuntu:24.04
 
 # Set environment variables to avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-# Install essential packages and Erlang from Ubuntu repositories
+# Install essential packages and Erlang
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
@@ -14,12 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     jq \
     unzip \
-    # Enable universe repository for additional packages
-    && apt-get install -y software-properties-common \
+    software-properties-common \
     && add-apt-repository universe \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-    # Erlang from Ubuntu repos (much smaller than building from source)
     erlang \
     erlang-crypto \
     erlang-syntax-tools \
@@ -28,10 +26,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     erlang-ssl \
     erlang-public-key \
     erlang-asn1 \
-    # AWS CLI dependencies
     python3 \
     python3-pip \
-    # Additional runtime dependencies
     libc6 \
     libssl3 \
     libncurses6 \
@@ -68,12 +64,12 @@ RUN mkdir -p /opt/toolbox \
 # Extract agent from semaphoreci/agent image
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
 
-# Final stage - create minimal runtime image
-FROM base AS final
+# Copy agent from extractor stage
+COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
 
 # Create semaphore user
-RUN groupadd -g 1000 semaphore \
-    && useradd -u 1000 -g semaphore -m -s /bin/bash semaphore
+RUN groupadd -g 2000 semaphore \
+    && useradd -u 2000 -g semaphore -m -s /bin/bash semaphore
 
 # Set up environment
 ENV USER=semaphore
@@ -81,9 +77,6 @@ ENV HOME=/home/${USER}
 ENV PATH="/usr/local/bin:/usr/local/aws-cli/v2/current/bin:${PATH}"
 ENV BASH_ENV="${HOME}/.bashrc"
 ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
-
-# Copy agent from extractor stage
-COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
 
 # Copy toolbox to user directory and set up symlinks
 RUN mkdir -p ${HOME}/.toolbox \
@@ -104,7 +97,7 @@ COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
 COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/agent /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
-# Aggressive cleanup to minimize image size
+# Clean up to minimize image size
 RUN rm -rf /opt/toolbox \
     && find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.la" -delete 2>/dev/null || true \
