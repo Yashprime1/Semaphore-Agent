@@ -96,7 +96,7 @@ RUN chown -R $USER:$USER /home/semaphore/.toolbox \
 
 COPY --chown=$USER:$USER shutdown.sh /opt/semaphore/shutdown
 COPY --chown=$USER:$USER entrypoint.sh /opt/semaphore/entrypoint.sh
-RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
+RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh && chown -R $USER:$USER /opt/semaphore
 
 RUN rm -rf /root/.toolbox /usr/local/aws-cli/v2/current/dist/botocore/docs \
  && find /usr -name "*.a" -delete \

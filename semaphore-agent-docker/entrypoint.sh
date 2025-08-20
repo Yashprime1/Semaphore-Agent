@@ -68,7 +68,7 @@ if [[ -n "$SSH_KEYS_PARAMETER_NAME" ]]; then
 fi
 
 # Ensure the directory exists
-mkdir -p /opt/semaphore && chown -R semaphore:semaphore /opt/semaphore
+mkdir -p /opt/semaphore
 
 # Generate the semaphore-agent.yml configuration file
 cat > /opt/semaphore/semaphore-agent.yml << EOF
