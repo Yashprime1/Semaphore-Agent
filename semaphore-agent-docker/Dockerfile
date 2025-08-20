@@ -43,28 +43,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libuuid1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /var/cache/apt/archives/*
+    && rm -rf /var/cache/apt/archives/* \
+    && rm -rf /usr/share/doc/* \
+    && rm -rf /usr/share/man/* \
+    && rm -rf /usr/share/locale/* \
+    && rm -rf /usr/share/info/* \
+    && rm -rf /usr/share/groff/* \
+    && rm -rf /usr/share/lintian/* \
+    && rm -rf /usr/share/common-licenses/*
 
-# Install AWS CLI v2 and Semaphore CLI in a single layer
+# Install AWS CLI v2 and Semaphore CLI in a single layer with aggressive cleanup
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
     && ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
     && rm -rf awscliv2.zip aws \
     && curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz \
     && mv sem /usr/local/bin/sem \
-    && chmod +x /usr/local/bin/sem
+    && chmod +x /usr/local/bin/sem \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs \
+    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/examples \
+    && find /usr/local/aws-cli -name "*.pyc" -delete 2>/dev/null || true \
+    && find /usr/local/aws-cli -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
-# Install Semaphore Toolbox
+# Install Semaphore Toolbox and set up user in single layer
 RUN mkdir -p /opt/toolbox \
     && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /opt/toolbox --strip-components=1 \
-    && chmod +x /opt/toolbox/*
+    && chmod +x /opt/toolbox/* \
+    && groupadd -g 2000 semaphore \
+    && useradd -u 2000 -g semaphore -m -s /bin/bash semaphore
 
 # Copy agent from extractor stage
 COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
-
-# Create semaphore user
-RUN groupadd -g 2000 semaphore \
-    && useradd -u 2000 -g semaphore -m -s /bin/bash semaphore
 
 # Set up environment
 ENV USER=semaphore
@@ -73,7 +82,11 @@ ENV PATH="/usr/local/bin:/usr/local/aws-cli/v2/current/bin:${PATH}"
 ENV BASH_ENV="${HOME}/.bashrc"
 ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
 
-# Copy toolbox to user directory and set up symlinks
+# Copy entrypoint and shutdown scripts
+COPY --chown=root:root shutdown.sh /opt/semaphore/shutdown
+COPY --chown=root:root entrypoint.sh /opt/semaphore/entrypoint.sh
+
+# Set up toolbox and scripts in single layer
 RUN mkdir -p ${HOME}/.toolbox \
     && cp -r /opt/toolbox/* ${HOME}/.toolbox/ \
     && chown -R ${USER}:${USER} ${HOME}/.toolbox \
@@ -85,34 +98,22 @@ RUN mkdir -p ${HOME}/.toolbox \
     && ln -sf ${HOME}/.toolbox/artifact /usr/local/bin/artifact \
     && ln -sf ${HOME}/.toolbox/sem-context /usr/local/bin/sem-context \
     && ln -sf ${HOME}/.toolbox/retry /usr/local/bin/retry \
-    && ln -sf ${HOME}/.toolbox/test-results /usr/local/bin/test-results
-
-# Copy entrypoint and shutdown scripts
-COPY --chown=root:root shutdown.sh /opt/semaphore/shutdown
-COPY --chown=root:root entrypoint.sh /opt/semaphore/entrypoint.sh
-RUN chmod +x /opt/semaphore/agent /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh \
+    && ln -sf ${HOME}/.toolbox/test-results /usr/local/bin/test-results \
+    && chmod +x /opt/semaphore/agent /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh \
     && chown -R ${USER}:${USER} /opt/semaphore
 
-# Aggressive cleanup to minimize image size
+# Final cleanup to minimize image size
 RUN rm -rf /opt/toolbox \
     && find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.la" -delete 2>/dev/null || true \
     && find /usr -name "*.pyc" -delete 2>/dev/null || true \
     && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
     && find /usr/lib/python* -name "test" -type d -exec rm -rf {} + 2>/dev/null || true \
     && find /usr/lib/python* -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true \
     && find /usr/lib/python* -name "*.pyc" -delete 2>/dev/null || true \
     && find /usr/lib/python* -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
     && rm -rf /tmp/* \
-    && rm -rf /var/tmp/* \
-    && rm -rf /usr/share/doc/* \
-    && rm -rf /usr/share/man/* \
-    && rm -rf /usr/share/locale/* \
-    && rm -rf /usr/share/info/* \
-    && rm -rf /usr/share/groff/* \
-    && rm -rf /usr/share/lintian/* \
-    && rm -rf /usr/share/common-licenses/*
+    && rm -rf /var/tmp/*
 
 WORKDIR ${HOME}
 
