@@ -74,7 +74,9 @@ COPY --from=agent-extractor /opt/semaphore/agent /opt/semaphore/agent
 COPY shutdown.sh /opt/semaphore/shutdown
 COPY entrypoint.sh /opt/semaphore/entrypoint.sh
 
-RUN chmod +x /opt/semaphore/{agent,shutdown,entrypoint.sh} \
+RUN chmod +x /opt/semaphore/agent \
+    && chmod +x /opt/semaphore/shutdown \
+    && chmod +x /opt/semaphore/entrypoint.sh \
     && chown -R semaphore:semaphore /opt/semaphore
 
 # ---------------------------
