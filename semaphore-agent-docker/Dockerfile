@@ -3,14 +3,14 @@
 # Extract agent from semaphoreci/agent image
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
 
-# Final stage - create minimal runtime image
-FROM ubuntu:24.04 AS final
+# Final stage - use debian slim for smaller base image
+FROM debian:bookworm-slim AS final
 
 # Set environment variables to avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-# Install essential packages and Erlang
+# Install essential packages in a single RUN command to reduce layers
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     ca-certificates \
@@ -19,10 +19,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     jq \
     unzip \
-    software-properties-common \
-    && add-apt-repository universe \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
     erlang \
     erlang-crypto \
     erlang-syntax-tools \
@@ -45,19 +41,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreadline8 \
     libsqlite3-0 \
     libuuid1 \
-    && apt-get remove -y software-properties-common \
-    && apt-get autoremove -y \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apt/archives/*
 
-# Install AWS CLI v2
+# Install AWS CLI v2 and Semaphore CLI in a single layer
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
     && ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
-    && rm -rf awscliv2.zip aws
-
-# Install Semaphore CLI
-RUN curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz \
+    && rm -rf awscliv2.zip aws \
+    && curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz \
     && mv sem /usr/local/bin/sem \
     && chmod +x /usr/local/bin/sem
 
@@ -100,7 +93,7 @@ COPY --chown=root:root entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/agent /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh \
     && chown -R ${USER}:${USER} /opt/semaphore
 
-# Clean up to minimize image size
+# Aggressive cleanup to minimize image size
 RUN rm -rf /opt/toolbox \
     && find /usr -name "*.a" -delete 2>/dev/null || true \
     && find /usr -name "*.la" -delete 2>/dev/null || true \
@@ -112,9 +105,15 @@ RUN rm -rf /opt/toolbox \
     && find /usr/lib/python* -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true \
     && find /usr/lib/python* -name "*.pyc" -delete 2>/dev/null || true \
     && find /usr/lib/python* -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
-    && rm -rf /var/cache/apt/archives/* \
     && rm -rf /tmp/* \
-    && rm -rf /var/tmp/*
+    && rm -rf /var/tmp/* \
+    && rm -rf /usr/share/doc/* \
+    && rm -rf /usr/share/man/* \
+    && rm -rf /usr/share/locale/* \
+    && rm -rf /usr/share/info/* \
+    && rm -rf /usr/share/groff/* \
+    && rm -rf /usr/share/lintian/* \
+    && rm -rf /usr/share/common-licenses/*
 
 WORKDIR ${HOME}
 

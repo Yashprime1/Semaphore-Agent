@@ -88,4 +88,4 @@ echo "Configuration file generated:"
 cat /opt/semaphore/semaphore-agent.yml
 
 # Switch to semaphore user and start the agent
-exec su -c "/opt/semaphore/agent start --config-file /opt/semaphore/semaphore-agent.yml" ${USER}
+exec su -c "/opt/semaphore/agent start --config-file /opt/semaphore/semaphore-agent.yml" semaphore
