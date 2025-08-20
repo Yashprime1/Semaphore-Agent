@@ -67,7 +67,7 @@ RUN groupadd -g 3000 $USER \
  && useradd -u 3000 -g $USER -m -s /bin/bash $USER \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
-    ca-certificates curl openssh-client python3.13 python3.13-venv python3.13-dev tzdata libssl3t64 libncurses6 zlib1g libffi8 libbz2-1.0t64 liblzma5 libreadline8t64 libsqlite3-0 libuuid1 \
+    ca-certificates curl openssh-client python3 tzdata \
  && curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip \
  && apt-get install -y unzip \
  && unzip awscliv2.zip \
@@ -75,9 +75,7 @@ RUN groupadd -g 3000 $USER \
  && rm -rf awscliv2.zip aws \
  && apt-get purge -y unzip \
  && apt-get autoremove -y && apt-get clean \
- && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* /usr/share/locales/* \
- && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
- && ln -sf /usr/bin/python3.13 /usr/bin/python
+ && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* /usr/share/locales/* 
 
 # Copy binaries & tools
 COPY --from=agent-extractor /opt/semaphore/agent /opt/semaphore/agent
