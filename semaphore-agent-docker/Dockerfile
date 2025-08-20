@@ -20,10 +20,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     unzip \
     erlang \
-    erlang-crypto \
-    erlang-syntax-tools \
-    erlang-parsetools \
-    erlang-inets \
     erlang-ssl \
     erlang-public-key \
     erlang-asn1 \
