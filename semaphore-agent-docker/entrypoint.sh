@@ -40,7 +40,7 @@ configure_known_hosts() {
     local ssh_keys_param=$2
 
     echo "Creating .ssh folder..."
-    mkdir -p /home/${USER}/.ssh
+    mkdir -p /home/semaphore/.ssh
 
     echo "Fetching SSH keys from SSM parameter '$ssh_keys_param'..."
     local keys=$(aws ssm get-parameter \
@@ -55,21 +55,20 @@ configure_known_hosts() {
     fi
 
     echo "Adding keys to .ssh/known_hosts..."
-    echo "$keys" | jq -r '.[]' | sed 's/^/github.com /' >> /home/${USER}/.ssh/known_hosts
+    echo "$keys" | jq -r '.[]' | sed 's/^/github.com /' >> /home/semaphore/.ssh/known_hosts
 
     echo "Updating permissions on .ssh folder..."
-    chown -R ${USER}:${USER} /home/${USER}/.ssh
-    chmod 700 /home/${USER}/.ssh
-    chmod 600 /home/${USER}/.ssh/known_hosts
+    chown -R semaphore:semaphore /home/semaphore/.ssh
+    chmod 700 /home/semaphore/.ssh
+    chmod 600 /home/semaphore/.ssh/known_hosts
 }
 
 if [[ -n "$SSH_KEYS_PARAMETER_NAME" ]]; then
     configure_known_hosts "$AWS_REGION" "$SSH_KEYS_PARAMETER_NAME"
 fi
 
-# Ensure the directory exists and has proper permissions
+# Ensure the directory exists
 mkdir -p /opt/semaphore
-chown ${USER}:${USER} /opt/semaphore
 
 # Generate the semaphore-agent.yml configuration file
 cat > /opt/semaphore/semaphore-agent.yml << EOF
@@ -80,12 +79,8 @@ disconnect-after-job: ${DISCONNECT_AFTER_JOB}
 disconnect-after-idle-timeout: ${DISCONNECT_AFTER_IDLE_TIMEOUT}
 EOF
 
-# Set proper permissions on the config file
-chown ${USER}:${USER} /opt/semaphore/semaphore-agent.yml
-chmod 600 /opt/semaphore/semaphore-agent.yml
-
 echo "Configuration file generated:"
 cat /opt/semaphore/semaphore-agent.yml
 
-# Switch to semaphore user and start the agent
-exec su -c "/opt/semaphore/agent start --config-file /opt/semaphore/semaphore-agent.yml" semaphore
+# Start the semaphore agent
+exec /opt/semaphore/agent start --config-file /opt/semaphore/semaphore-agent.yml
