@@ -100,7 +100,6 @@ RUN rm -rf /opt/toolbox \
     && find /usr -name "*.pyc" -delete 2>/dev/null || true \
     && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
     && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/data 2>/dev/null || true \
     && find /usr/lib/python* -name "test" -type d -exec rm -rf {} + 2>/dev/null || true \
     && find /usr/lib/python* -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true \
     && find /usr/lib/python* -name "*.pyc" -delete 2>/dev/null || true \
