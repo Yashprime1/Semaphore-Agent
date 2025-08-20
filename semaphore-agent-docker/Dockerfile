@@ -64,8 +64,8 @@ ENV USER=semaphore \
     SEMAPHORE_TOOLBOX_DIR="/home/semaphore/.toolbox"
 
 # Single RUN for apt install, cleanup, Python setup, AWS CLI, and symlinks
-RUN groupadd -g 1000 "$USER" \
- && useradd -u 1000 -g "$USER" -m -s /bin/bash "$USER" \
+RUN groupadd -g 3000 "$USER" \
+ && useradd -u 3000 -g "$USER" -m -s /bin/bash "$USER" \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
     ca-certificates git openssh-client curl jq tzdata \
