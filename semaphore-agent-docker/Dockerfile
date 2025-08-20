@@ -95,9 +95,10 @@ RUN mkdir -p ${HOME}/.toolbox \
     && ln -sf ${HOME}/.toolbox/test-results /usr/local/bin/test-results
 
 # Copy entrypoint and shutdown scripts
-COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
-COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
-RUN chmod +x /opt/semaphore/agent /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
+COPY --chown=root:root shutdown.sh /opt/semaphore/shutdown
+COPY --chown=root:root entrypoint.sh /opt/semaphore/entrypoint.sh
+RUN chmod +x /opt/semaphore/agent /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh \
+    && chown -R ${USER}:${USER} /opt/semaphore
 
 # Clean up to minimize image size
 RUN rm -rf /opt/toolbox \
@@ -115,7 +116,6 @@ RUN rm -rf /opt/toolbox \
     && rm -rf /tmp/* \
     && rm -rf /var/tmp/*
 
-USER ${USER}
 WORKDIR ${HOME}
 
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
