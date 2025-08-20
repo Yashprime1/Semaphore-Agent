@@ -1,170 +1,116 @@
+######### Stage 1 - Build Erlang runtime #########
 FROM alpine:3.18 AS erlang-builder
 
-RUN apk add --no-cache --virtual .build-deps \
-        build-base curl autoconf ncurses-dev openssl-dev zlib-dev perl \
-    && curl -fsSL https://github.com/erlang/otp/releases/download/OTP-26.2.5.2/otp_src_26.2.5.2.tar.gz | tar -xz \
-    && cd otp_src_26.2.5.2/ \
-    && ./configure \
-        --prefix=/opt/erlang \
-        --enable-smp-support \
-        --disable-debug \
-        --disable-hipe \
-        --disable-sctp \
-        --without-javac \
-        --without-wx \
-        --without-observer \
-        --without-debugger \
-        --without-et \
-        --without-gs \
-        --without-ic \
-        --without-orber \
-        --without-cosTransactions \
-        --without-cosEvent \
-        --without-cosTime \
-        --without-cosNotification \
-        --without-cosProperty \
-        --without-cosFileTransfer \
-        --without-cosEventDomain \
-        --without-diameter \
-        --without-eldap \
-        --without-erl_docgen \
-        --without-ftp \
-        --without-jinterface \
-        --without-megaco \
-        --without-odbc \
-        --without-reltool \
-        --without-ssh \
-        --without-tftp \
-        --without-typer \
-        --without-snmp \
-        --without-mnesia \
-        --without-eunit \
-        --without-common_test \
-        --without-dialyzer \
-        --without-xmerl \
-        --without-parsetools \
-        --without-syntax_tools \
-        --without-tools \
-        --without-runtime_tools \
-        --without-inets \
-        --without-edoc \
-        --enable-shared-zlib \
-        --enable-static-drivers \
-    && make -j$(nproc) \
-    && make install \
-    && cd .. \
-    && rm -rf otp_src_26.2.5.2/ \
-    && apk del .build-deps \
-    && strip --strip-unneeded /opt/erlang/lib/erlang/erts-*/bin/* 2>/dev/null || true \
-    && find /opt/erlang -name "*.so" -exec strip --strip-unneeded {} \; 2>/dev/null || true \
-    && find /opt/erlang -type d -name "src" -exec rm -rf {} + 2>/dev/null || true \
-    && find /opt/erlang -type d -name "examples" -exec rm -rf {} + 2>/dev/null || true \
-    && find /opt/erlang -type d -name "doc" -exec rm -rf {} + 2>/dev/null || true \
-    && find /opt/erlang -name "*.beam" ! -path "*/ebin/*" -delete 2>/dev/null || true
+ARG OTP_VERSION=26.2.5.2
 
+RUN apk add --no-cache --virtual .build-deps \
+    build-base curl autoconf ncurses-dev openssl-dev zlib-dev perl \
+ && curl -fsSL https://github.com/erlang/otp/releases/download/OTP-${OTP_VERSION}/otp_src_${OTP_VERSION}.tar.gz \
+    | tar -xz \
+ && cd otp_src_${OTP_VERSION} \
+ && ./configure \
+    --prefix=/opt/erlang \
+    --enable-smp-support \
+    --disable-debug \
+    --disable-hipe \
+    --disable-sctp \
+    --disable-observer \
+    --without-javac --without-wx --without-debugger --without-et \
+    --without-gs --without-ic --without-orber \
+    --without-cosTransactions --without-cosEvent --without-cosTime \
+    --without-cosNotification --without-cosProperty --without-cosFileTransfer --without-cosEventDomain \
+    --without-diameter --without-eldap --without-erl_docgen --without-ftp \
+    --without-jinterface --without-megaco --without-odbc --without-reltool \
+    --without-ssh --without-tftp --without-typer --without-snmp \
+    --without-mnesia --without-eunit --without-common_test \
+    --without-dialyzer --without-xmerl --without-parsetools --without-syntax_tools \
+    --without-tools --without-runtime_tools --without-inets --without-edoc \
+    --enable-shared-zlib --enable-static-drivers \
+ && make -j"$(nproc)" && make install \
+ && cd .. && rm -rf otp_src_${OTP_VERSION} \
+ && apk del .build-deps \
+ && find /opt/erlang -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true \
+ && rm -rf /opt/erlang/lib/erlang/lib/*/src \
+           /opt/erlang/lib/erlang/lib/*/doc \
+           /opt/erlang/lib/erlang/lib/*/examples
+
+######### Stage 2 - Build Semaphore tools #########
 FROM alpine:3.18 AS tools-builder
 
-RUN apk add --no-cache curl \
-    && curl -fsSL https://github.com/semaphoreci/cli/releases/download/v0.32.0/sem_Linux_x86_64.tar.gz | tar -xz \
-    && strip --strip-unneeded sem 2>/dev/null || true \
-    && mkdir -p /toolbox \
-    && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v1.28.0/self-hosted-linux.tar | tar -x -C /toolbox --strip-components=1 \
-    && find /toolbox -type f -executable -exec strip --strip-unneeded {} \; 2>/dev/null || true
+ARG SEM_CLI_VERSION=0.32.0
+ARG TOOLBOX_VERSION=1.28.0
 
+RUN apk add --no-cache curl \
+ && curl -fsSL https://github.com/semaphoreci/cli/releases/download/v${SEM_CLI_VERSION}/sem_Linux_x86_64.tar.gz \
+    | tar -xz \
+ && mkdir -p /toolbox \
+ && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v${TOOLBOX_VERSION}/self-hosted-linux.tar \
+    | tar -x -C /toolbox --strip-components=1 \
+ && find /toolbox -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+######### Stage 3 - Extract Agent  #########
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
 
-FROM ubuntu:22.04
+######### Stage 4 - Final Image: Ubuntu 24.04 #########
+FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=UTC
 
-ENV USER=semaphore
-ENV HOME=/home/${USER}
-ENV PATH="/opt/erlang/bin:/usr/local/bin:/usr/local/aws-cli/v2/current/bin:${PATH}"
-ENV BASH_ENV="${HOME}/.bashrc"
-ENV SEMAPHORE_TOOLBOX_DIR="${HOME}/.toolbox"
+ENV USER=semaphore \
+    HOME=/home/semaphore \
+    PATH="/opt/erlang/bin:/usr/local/bin:/usr/local/aws-cli/v2/current/bin:${PATH}" \
+    BASH_ENV="/home/semaphore/.bashrc" \
+    SEMAPHORE_TOOLBOX_DIR="/home/semaphore/.toolbox"
 
-RUN groupadd -g 1000 ${USER} \
-    && useradd -u 1000 -g ${USER} -m -s /bin/bash ${USER}
+# Single RUN for apt install, cleanup, Python setup, AWS CLI, and symlinks
+RUN groupadd -g 1000 "$USER" \
+ && useradd -u 1000 -g "$USER" -m -s /bin/bash "$USER" \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+    ca-certificates git openssh-client curl jq tzdata \
+    libc6 libssl3t64 libncurses6 zlib1g libffi8 libexpat1 \
+    libbz2-1.0t64 liblzma5 libreadline8t64 libsqlite3-0 libuuid1 \
+    python3.13 python3.13-dev \
+ && curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip \
+ && unzip awscliv2.zip \
+ && ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
+ && rm -rf awscliv2.zip aws \
+ && apt-get purge -y unzip \
+ && apt-get autoremove -y && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+ && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
+ && ln -sf /usr/bin/python3.13 /usr/bin/python
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        git \
-        openssh-client \
-        curl \
-        jq \
-        gnupg \
-        software-properties-common \
-        lsb-release \
-        unzip \
-        libc6 \
-        libssl3 \
-        libncurses6 \
-        zlib1g \
-        tzdata \
-        libffi8 \
-        libexpat1 \
-        libbz2-1.0 \
-        liblzma5 \
-        libreadline8 \
-        libsqlite3-0 \
-        libuuid1 \
-    && curl -fsSL https://keyserver.ubuntu.com/pks/lookup?op=get\&search=0xBA6932366A755776 | \
-        gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive-keyring.gpg] https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy main" \
-        > /etc/apt/sources.list.d/deadsnakes.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        python3.13 \
-        python3.13-dev \
-        libpython3.13-stdlib \
-        libpython3.13 \
-    && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
-    && unzip awscliv2.zip \
-    && ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
-    && rm -rf awscliv2.zip aws \
-    && apt-get remove -y gnupg software-properties-common lsb-release unzip \
-    && apt-get autoremove -y \
-    && apt-get clean \
-    && rm -rf /var/cache/apt/archives /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/python3.13 /usr/bin/python3 \
-    && ln -sf /usr/bin/python3.13 /usr/bin/python
+# Copy binaries & tools—keep root-owned where needed, and re-own user files
+COPY --from=agent-extractor /opt/semaphore/agent /opt/semaphore/agent
+COPY --from=erlang-builder /opt/erlang /opt/erlang
+COPY --from=tools-builder /sem /usr/local/bin/sem
+COPY --from=tools-builder /toolbox /home/semaphore/.toolbox
 
-COPY --from=agent-extractor --chown=root:root /opt/semaphore/agent /opt/semaphore/agent
-COPY --from=erlang-builder --chown=root:root /opt/erlang /opt/erlang
-COPY --from=tools-builder --chown=root:root /sem /usr/local/bin/sem
+RUN chown -R semaphore:semaphore /home/semaphore/.toolbox \
+ && chmod +x /home/semaphore/.toolbox/* \
+ && echo '. /home/semaphore/.toolbox/libcheckout' >> /home/semaphore/.bashrc \
+ && echo '. /home/semaphore/.toolbox/libchecksum' >> /home/semaphore/.bashrc \
+ && ln -sf /home/semaphore/.toolbox/cache /usr/local/bin/cache \
+ && ln -sf /home/semaphore/.toolbox/artifact /usr/local/bin/artifact \
+ && ln -sf /home/semaphore/.toolbox/sem-context /usr/local/bin/sem-context \
+ && ln -sf /home/semaphore/.toolbox/retry /usr/local/bin/retry \
+ && ln -sf /home/semaphore/.toolbox/test-results /usr/local/bin/test-results \
+ && chmod +x /opt/semaphore/agent /usr/local/bin/sem
 
-COPY --from=tools-builder /toolbox /root/.toolbox
-RUN mkdir -p /home/${USER}/.toolbox \
-    && cp -r /root/.toolbox/* /home/${USER}/.toolbox/ \
-    && chown -R ${USER}:${USER} /home/${USER}/.toolbox \
-    && chmod +x /home/${USER}/.toolbox/* \
-    && echo '. /home/semaphore/.toolbox/libcheckout' >> /home/${USER}/.bashrc \
-    && echo '. /home/semaphore/.toolbox/libchecksum' >> /home/${USER}/.bashrc \
-    && chown ${USER}:${USER} /home/${USER}/.bashrc \
-    && ln -sf /home/${USER}/.toolbox/cache /usr/local/bin/cache \
-    && ln -sf /home/${USER}/.toolbox/artifact /usr/local/bin/artifact \
-    && ln -sf /home/${USER}/.toolbox/sem-context /usr/local/bin/sem-context \
-    && ln -sf /home/${USER}/.toolbox/retry /usr/local/bin/retry \
-    && ln -sf /home/${USER}/.toolbox/test-results /usr/local/bin/test-results \
-    && chmod +x /opt/semaphore/agent /usr/local/bin/sem \
-    && mkdir -p /opt/semaphore \
-    && chown -R ${USER}:${USER} /opt/semaphore \
-    && ldconfig
-
-COPY --chown=${USER}:${USER} shutdown.sh /opt/semaphore/shutdown
-COPY --chown=${USER}:${USER} entrypoint.sh /opt/semaphore/entrypoint.sh
+COPY --chown=semaphore:semaphore shutdown.sh /opt/semaphore/shutdown
+COPY --chown=semaphore:semaphore entrypoint.sh /opt/semaphore/entrypoint.sh
 RUN chmod +x /opt/semaphore/shutdown /opt/semaphore/entrypoint.sh
 
-RUN find /usr -name "*.a" -delete 2>/dev/null || true \
-    && find /usr -name "*.la" -delete 2>/dev/null || true \
-    && find /usr -name "*.pyc" -delete 2>/dev/null || true \
-    && find /usr -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
-    && rm -rf /root/.toolbox \
-    && rm -rf /usr/local/aws-cli/v2/current/dist/botocore/docs 2>/dev/null || true 
-   
-USER ${USER}
-WORKDIR ${HOME}
+# Remove leftover build/config files aggressively to shrink layer
+RUN rm -rf /root/.toolbox /usr/local/aws-cli/v2/current/dist/botocore/docs \
+    && find /usr -name "*.a" -delete \
+    && find /usr -name "*.la" -delete \
+    && find /usr -name "*.pyc" -delete \
+    && find /usr -name "__pycache__" -type d -exec rm -rf {} + || true
+
+USER semaphore
+WORKDIR /home/semaphore
 
 ENTRYPOINT ["/opt/semaphore/entrypoint.sh"]
