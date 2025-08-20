@@ -67,7 +67,7 @@ RUN groupadd -g 3000 $USER \
  && useradd -u 3000 -g $USER -m -s /bin/bash $USER \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
-    ca-certificates curl git openssh-client python3 tzdata \
+    ca-certificates curl git jq openssh-client python3 tzdata \
  && curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip \
  && apt-get install -y unzip \
  && unzip awscliv2.zip \
