@@ -1,0 +1,55 @@
+name: Build-Semaphore-Agent-Docker
+
+run-name: build-semaphore-agent-docker-${{ github.ref_name }}-${{ github.run_number }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      Region:
+        description: "AWS Region"
+        required: false
+        default: "eu-west-1"
+      AccountId:
+        description: "AWS Account ID"
+        required: false
+        default: "254265454980"
+      
+  
+jobs:
+  build-default-semaphore-agent-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION:  ${{ inputs.Region }}
+
+      - name: Get ECR login password
+        id: ecr-password
+        run: |
+          ECR_PASSWORD=$(aws ecr get-login-password --region eu-west-1)
+          echo "::add-mask::$ECR_PASSWORD"
+          echo "password=$ECR_PASSWORD" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.AccountId }}.dkr.ecr.${{ inputs.Region }}.amazonaws.com
+          username: AWS
+          password: ${{ steps.ecr-password.outputs.password }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ inputs.AccountId }}.dkr.ecr.${{ inputs.Region }}.amazonaws.com/semaphore-agent:github-${{ github.ref_name }}-${{ github.run_number }}
+          platforms: linux/amd64
