@@ -78,6 +78,15 @@ RUN groupadd -g 3000 $USER \
  && apt-get autoremove -y && apt-get clean \
  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* /usr/share/locales/*
 
+# Copy binaries & tools
+COPY --from=agent-extractor /opt/semaphore/agent /opt/semaphore/agent
+COPY --from=erlang-builder /opt/erlang /opt/erlang
+COPY --from=tools-builder /sem /usr/local/bin/sem
+COPY --from=tools-builder /toolbox /home/semaphore/.toolbox
+
+# Verify Erlang installation and escript availability
+RUN /opt/erlang/bin/escript --version
+
 # Install additional Semaphore CI tools
 RUN echo "Installing additional semaphoreci tools" \
  && echo "Installing SPC (Semaphore Pipeline Compiler)..." \
@@ -88,16 +97,7 @@ RUN echo "Installing additional semaphoreci tools" \
  && curl -L https://github.com/renderedtext/when/releases/download/v1.2.1/when_otp_26 -o /usr/local/bin/when \
  && chmod +x /usr/local/bin/when \
  && echo "Testing when tool installation..." \
- && when --version 
-
-# Copy binaries & tools
-COPY --from=agent-extractor /opt/semaphore/agent /opt/semaphore/agent
-COPY --from=erlang-builder /opt/erlang /opt/erlang
-COPY --from=tools-builder /sem /usr/local/bin/sem
-COPY --from=tools-builder /toolbox /home/semaphore/.toolbox
-
-# Verify Erlang installation and escript availability
-RUN /opt/erlang/bin/escript --version
+ && when --version
 
 RUN chown -R $USER:$USER /home/semaphore/.toolbox \
  && chmod +x /home/semaphore/.toolbox/* \
