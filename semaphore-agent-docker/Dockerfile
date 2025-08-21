@@ -1,7 +1,7 @@
 ######### Stage 1 - Build Erlang runtime #########
 FROM alpine:3.18 AS erlang-builder
 
-ARG OTP_VERSION=26.2.5.2
+ARG OTP_VERSION=28.0.1
 
 RUN apk add --no-cache --virtual .build-deps \
     build-base curl autoconf ncurses-dev openssl-dev zlib-dev perl \
@@ -15,7 +15,16 @@ RUN apk add --no-cache --virtual .build-deps \
     --disable-hipe \
     --disable-sctp \
     --disable-observer \
-    --without-inets --without-edoc \
+    --without-javac --without-wx --without-debugger --without-et \
+    --without-gs --without-ic --without-orber \
+    --without-cosTransactions --without-cosEvent --without-cosTime \
+    --without-cosNotification --without-cosProperty --without-cosFileTransfer --without-cosEventDomain \
+    --without-diameter --without-eldap --without-erl_docgen --without-ftp \
+    --without-jinterface --without-megaco --without-odbc --without-reltool \
+    --without-ssh --without-tftp --without-typer --without-snmp \
+    --without-mnesia --without-eunit --without-common_test \
+    --without-dialyzer --without-xmerl --without-parsetools --without-syntax_tools \
+    --without-tools --without-runtime_tools --without-inets --without-edoc \
     --enable-shared-zlib --enable-static-drivers \
  && make -j"$(nproc)" && make install \
  && cd .. && rm -rf otp_src_${OTP_VERSION} \
@@ -66,7 +75,18 @@ RUN groupadd -g 3000 $USER \
  && rm -rf awscliv2.zip aws \
  && apt-get purge -y unzip \
  && apt-get autoremove -y && apt-get clean \
- && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* /usr/share/locales/* 
+ && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/doc/* /usr/share/man/* /usr/share/locale/* /usr/share/locales/*
+
+# Install additional Semaphore CI tools
+RUN echo "Installing additional semaphoreci tools" \
+ && echo "Installing SPC (Semaphore Pipeline Compiler)..." \
+ && curl -L https://github.com/semaphoreci/spc/releases/download/v1.12.1/spc_Linux_x86_64.tar.gz | tar -xz \
+ && mv spc /usr/local/bin/ \
+ && chmod +x /usr/local/bin/spc \
+ && echo "Installing When..." \
+ && curl -L https://github.com/renderedtext/when/releases/download/v1.2.1/when_otp_26 -o when_otp_26 \
+ && mv when_otp_26 /usr/local/bin/when \
+ && chmod +x /usr/local/bin/when 
 
 # Copy binaries & tools
 COPY --from=agent-extractor /opt/semaphore/agent /opt/semaphore/agent
@@ -83,13 +103,7 @@ RUN chown -R $USER:$USER /home/semaphore/.toolbox \
  && ln -sf /home/semaphore/.toolbox/sem-context /usr/local/bin/sem-context \
  && ln -sf /home/semaphore/.toolbox/retry /usr/local/bin/retry \
  && ln -sf /home/semaphore/.toolbox/test-results /usr/local/bin/test-results \
- && chmod +x /opt/semaphore/agent /usr/local/bin/sem \
- && curl -L https://github.com/semaphoreci/spc/releases/download/v1.12.1/spc_Linux_x86_64.tar.gz | tar -xz \
- && mv spc /usr/local/bin/ \
- && chmod +x /usr/local/bin/spc \
- && curl -L https://github.com/renderedtext/when/releases/download/v1.2.1/when_otp_26 -o when_otp_26 \
- && mv when_otp_26 /usr/local/bin/when \
- && chmod +x /usr/local/bin/when
+ && chmod +x /opt/semaphore/agent /usr/local/bin/sem
 
 COPY --chown=$USER:$USER shutdown.sh /opt/semaphore/shutdown
 COPY --chown=$USER:$USER entrypoint.sh /opt/semaphore/entrypoint.sh
