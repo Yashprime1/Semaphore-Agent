@@ -92,7 +92,10 @@ RUN chown -R $USER:$USER /home/semaphore/.toolbox \
  && ln -sf /home/semaphore/.toolbox/sem-context /usr/local/bin/sem-context \
  && ln -sf /home/semaphore/.toolbox/retry /usr/local/bin/retry \
  && ln -sf /home/semaphore/.toolbox/test-results /usr/local/bin/test-results \
- && chmod +x /opt/semaphore/agent /usr/local/bin/sem
+ && chmod +x /opt/semaphore/agent /usr/local/bin/sem \
+ && curl -L https://github.com/semaphoreci/spc/releases/download/v1.12.1/spc_Linux_x86_64.tar.gz | tar -xz \
+ && mv spc /usr/local/bin/ \
+ && chmod +x /usr/local/bin/spc
 
 COPY --chown=$USER:$USER shutdown.sh /opt/semaphore/shutdown
 COPY --chown=$USER:$USER entrypoint.sh /opt/semaphore/entrypoint.sh
