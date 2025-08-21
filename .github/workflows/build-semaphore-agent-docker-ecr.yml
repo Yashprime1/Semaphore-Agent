@@ -1,4 +1,4 @@
-name: Build-Semaphore-Agent-Docker
+name: Build-Semaphore-Agent-Docker-Ecr
 
 run-name: build-semaphore-agent-docker-${{ github.ref_name }}-${{ github.run_number }}
 
