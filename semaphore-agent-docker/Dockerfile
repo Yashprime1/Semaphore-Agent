@@ -23,7 +23,7 @@ RUN apk add --no-cache --virtual .build-deps \
     --without-jinterface --without-megaco --without-odbc --without-reltool \
     --without-ssh --without-tftp --without-typer --without-snmp \
     --without-mnesia --without-eunit --without-common_test \
-    --without-dialyzer --without-xmerl --without-parsetools --without-syntax_tools \
+    --without-dialyzer --without-xmerl \
     --without-tools --without-runtime_tools --without-inets --without-edoc \
     --enable-shared-zlib --enable-static-drivers \
  && make -j"$(nproc)" && make install \
