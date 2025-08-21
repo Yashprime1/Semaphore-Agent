@@ -401,6 +401,7 @@
       "Type": "AWS::ECR::Repository",
       "Properties": {
         "RepositoryName": "semaphore-agent"
+      }
     },
     "SplunkTokenSecretsManagerSecretArn": {
       "Export": {
