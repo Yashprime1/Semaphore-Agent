@@ -15,15 +15,6 @@ RUN apk add --no-cache --virtual .build-deps \
     --disable-hipe \
     --disable-sctp \
     --disable-observer \
-    --without-javac --without-wx --without-debugger --without-et \
-    --without-gs --without-ic --without-orber \
-    --without-cosTransactions --without-cosEvent --without-cosTime \
-    --without-cosNotification --without-cosProperty --without-cosFileTransfer --without-cosEventDomain \
-    --without-diameter --without-eldap --without-erl_docgen --without-ftp \
-    --without-jinterface --without-megaco --without-odbc --without-reltool \
-    --without-ssh --without-tftp --without-typer --without-snmp \
-    --without-mnesia --without-eunit --without-common_test \
-    --without-dialyzer --without-xmerl \
     --without-inets --without-edoc \
     --enable-shared-zlib --enable-static-drivers \
  && make -j"$(nproc)" && make install \
