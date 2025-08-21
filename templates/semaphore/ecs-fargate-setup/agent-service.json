@@ -305,7 +305,7 @@
             "Image": {
               "Fn::Sub":"${AWS::AccountId}.dkr.ecr.eu-west-1.amazonaws.com/semaphore-agent:${ContainerTag}"
             },
-          "LogConfiguration": {
+            "LogConfiguration": {
                 "LogDriver": "awslogs",
                 "Options": {
                   "awslogs-group": {
@@ -316,13 +316,6 @@
                   },
                   "awslogs-stream-prefix": "ecs"
                 }
-              },
-            "RepositoryCredentials": {
-              "CredentialsParameter": {
-                "Fn::ImportValue": {
-                  "Fn::Sub": "${StackPrefix}-SharedResources-ArtifactoryDockerUserCredentialsSecretsManagerSecretArn"
-                }
-              }
             },
             "MemoryReservation": 128,
             "Name": {
