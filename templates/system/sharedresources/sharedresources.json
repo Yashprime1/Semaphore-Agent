@@ -68,6 +68,12 @@
       },
       "Type": "AWS::S3::Bucket"
     },
+    "SemaphoreAgentEcrRepository": {
+      "Type": "AWS::ECR::Repository",
+      "Properties": {
+        "RepositoryName": "semaphore-agent"
+      }
+    },
     "PackerEc2InstanceIamRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -395,12 +401,6 @@
       },
       "Value": {
         "Ref": "ArtifactoryDockerUserCredentialsSecretsManagerSecret"
-      }
-    },
-    "SemaphoreAgentEcrRepository": {
-      "Type": "AWS::ECR::Repository",
-      "Properties": {
-        "RepositoryName": "semaphore-agent"
       }
     },
     "SplunkTokenSecretsManagerSecretArn": {
