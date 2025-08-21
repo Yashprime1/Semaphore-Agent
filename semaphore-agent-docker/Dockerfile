@@ -24,7 +24,7 @@ RUN apk add --no-cache --virtual .build-deps \
     --without-ssh --without-tftp --without-typer --without-snmp \
     --without-mnesia --without-eunit --without-common_test \
     --without-dialyzer --without-xmerl \
-    --without-tools --without-runtime_tools --without-inets --without-edoc \
+    --without-inets --without-edoc \
     --enable-shared-zlib --enable-static-drivers \
  && make -j"$(nproc)" && make install \
  && cd .. && rm -rf otp_src_${OTP_VERSION} \
