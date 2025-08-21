@@ -289,7 +289,7 @@
             "User":"semaphore",
             "Essential": true,
             "Image": {
-              "Fn::Sub":"artifactory.clevertap.net/clevertap/semaphore-agent:${ContainerTag}"
+              "Fn::Sub":"${AWS::AccountId}.dkr.ecr.eu-west-1.amazonaws.com/semaphore-agent:${ContainerTag}"
             },
           "LogConfiguration": {
                 "LogDriver": "awslogs",
