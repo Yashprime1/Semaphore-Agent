@@ -31,46 +31,11 @@ jobs:
           aws-region: ${{ inputs.Region }}
           aws-access-key-id: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
-         
-      - name: Verify AWS credentials and permissions
-        run: |
-          echo "Testing AWS credentials..."
-          aws sts get-caller-identity
-          echo "Testing ECR permissions..."
-          aws ecr describe-registry --region ${{ inputs.Region }}
-          echo "AWS credentials and ECR permissions verified successfully!"
-
-      - name: Create ECR repository if it doesn't exist
-        run: |
-          echo "Checking if ECR repository exists..."
-          if aws ecr describe-repositories --repository-names semaphore-agent --region ${{ inputs.Region }} 2>/dev/null; then
-            echo "Repository 'semaphore-agent' already exists"
-          else
-            echo "Creating repository 'semaphore-agent'..."
-            aws ecr create-repository --repository-name semaphore-agent --region ${{ inputs.Region }}
-            echo "Repository created successfully"
-          fi
-
-      - name: Get ECR login password
-        id: ecr-password
-        run: |
-          echo "Getting ECR login password..."
-          ECR_PASSWORD=$(aws ecr get-login-password --region ${{ inputs.Region }})
-          if [ $? -eq 0 ]; then
-            echo "::add-mask::$ECR_PASSWORD"
-            echo "password=$ECR_PASSWORD" >> $GITHUB_OUTPUT
-            echo "ECR password retrieved successfully"
-          else
-            echo "Failed to get ECR login password"
-            exit 1
-          fi
-
+      
       - name: Login to Amazon ECR
         uses: docker/login-action@v3
         with:
           registry: ${{ inputs.AccountId }}.dkr.ecr.${{ inputs.Region }}.amazonaws.com
-          username: AWS
-          password: ${{ steps.ecr-password.outputs.password }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
