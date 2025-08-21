@@ -24,7 +24,7 @@ RUN apk add --no-cache --virtual .build-deps \
     --without-ssh --without-tftp --without-typer --without-snmp \
     --without-mnesia --without-eunit --without-common_test \
     --without-dialyzer --without-xmerl --without-parsetools --without-syntax_tools \
-    --without-tools --without-runtime_tools --without-inets --without-edoc \
+    --without-runtime_tools --without-inets --without-edoc \
     --enable-shared-zlib --enable-static-drivers \
  && make -j"$(nproc)" && make install \
  && cd .. && rm -rf otp_src_${OTP_VERSION} \
@@ -61,7 +61,8 @@ ENV USER=semaphore \
     HOME=/home/semaphore \
     PATH="/opt/erlang/bin:/usr/local/bin:/usr/local/aws-cli/v2/current/bin:${PATH}" \
     BASH_ENV="/home/semaphore/.bashrc" \
-    SEMAPHORE_TOOLBOX_DIR="/home/semaphore/.toolbox"
+    SEMAPHORE_TOOLBOX_DIR="/home/semaphore/.toolbox" \
+    ERLANG_HOME="/opt/erlang"
 
 RUN groupadd -g 3000 $USER \
  && useradd -u 3000 -g $USER -m -s /bin/bash $USER \
@@ -84,15 +85,19 @@ RUN echo "Installing additional semaphoreci tools" \
  && mv spc /usr/local/bin/ \
  && chmod +x /usr/local/bin/spc \
  && echo "Installing When..." \
- && curl -L https://github.com/renderedtext/when/releases/download/v1.2.1/when_otp_26 -o when_otp_26 \
- && mv when_otp_26 /usr/local/bin/when \
- && chmod +x /usr/local/bin/when 
+ && curl -L https://github.com/renderedtext/when/releases/download/v1.2.1/when_otp_26 -o /usr/local/bin/when \
+ && chmod +x /usr/local/bin/when \
+ && echo "Testing when tool installation..." \
+ && when --version 
 
 # Copy binaries & tools
 COPY --from=agent-extractor /opt/semaphore/agent /opt/semaphore/agent
 COPY --from=erlang-builder /opt/erlang /opt/erlang
 COPY --from=tools-builder /sem /usr/local/bin/sem
 COPY --from=tools-builder /toolbox /home/semaphore/.toolbox
+
+# Verify Erlang installation and escript availability
+RUN /opt/erlang/bin/escript --version
 
 RUN chown -R $USER:$USER /home/semaphore/.toolbox \
  && chmod +x /home/semaphore/.toolbox/* \
@@ -103,7 +108,9 @@ RUN chown -R $USER:$USER /home/semaphore/.toolbox \
  && ln -sf /home/semaphore/.toolbox/sem-context /usr/local/bin/sem-context \
  && ln -sf /home/semaphore/.toolbox/retry /usr/local/bin/retry \
  && ln -sf /home/semaphore/.toolbox/test-results /usr/local/bin/test-results \
- && chmod +x /opt/semaphore/agent /usr/local/bin/sem
+ && chmod +x /opt/semaphore/agent /usr/local/bin/sem \
+ && echo "Testing when tool..." \
+ && when --version
 
 COPY --chown=$USER:$USER shutdown.sh /opt/semaphore/shutdown
 COPY --chown=$USER:$USER entrypoint.sh /opt/semaphore/entrypoint.sh
