@@ -5,6 +5,8 @@ ARG OTP_VERSION=28.0.1
 
 RUN apk add --no-cache --virtual .build-deps \
     build-base curl autoconf ncurses-dev openssl-dev zlib-dev perl \
+ && apk add --no-cache \
+    ncurses-libs libstdc++ libgcc \
  && curl -fsSL https://github.com/erlang/otp/releases/download/OTP-${OTP_VERSION}/otp_src_${OTP_VERSION}.tar.gz \
     | tar -xz \
  && cd otp_src_${OTP_VERSION} \
