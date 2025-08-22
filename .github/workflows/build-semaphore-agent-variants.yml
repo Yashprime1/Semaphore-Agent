@@ -29,7 +29,7 @@ jobs:
         id: build_default_ami
         run: |
           make packer.init
-          make packer.build.linux INSTALL_ERLANG=false AMI_INSTANCE_TYPE=t2.micro AMI_ARCH=x86_64 AWS_REGION=${{ github.event.inputs.Region || 'eu-west-1' }} AMI_PREFIX=semaphore-agent-${{ github.run_id }} TOOLBOX_VERSION=v1.26.0 | tee packer_output.log
+          make packer.build.linux INSTALL_ERLANG=true AMI_INSTANCE_TYPE=t2.micro AMI_ARCH=x86_64 AWS_REGION=${{ github.event.inputs.Region || 'eu-west-1' }} AMI_PREFIX=semaphore-agent-${{ github.run_id }} TOOLBOX_VERSION=v1.26.0 | tee packer_output.log
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
