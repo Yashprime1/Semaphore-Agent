@@ -91,7 +91,8 @@ ln -sf /usr/local/bin/jq /usr/bin/jq
 # Install Google Chrome for test cafe
 wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_135.0.7049.114-1_amd64.deb \
   && apt install -y /tmp/chrome.deb \
-  && rm /tmp/chrome.deb
+  && rm /tmp/chrome.deb \
+  && ln -sf /usr/bin/google-chrome /usr/bin/chrome
 
 # Install Node.js and npm
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
