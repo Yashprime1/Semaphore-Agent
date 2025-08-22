@@ -24,8 +24,10 @@ RUN apk add --no-cache --virtual .build-deps \
            /opt/erlang/lib/erlang/lib/*/examples \
  && echo "Verifying Erlang installation in builder stage..." \
  && ls -la /opt/erlang/bin/ \
- && /opt/erlang/bin/escript --version \
- && /opt/erlang/bin/erl -eval "erlang:halt()." -noshell
+ && /opt/erlang/bin/erl -eval "erlang:halt()." -noshell \
+ && echo "Testing escript with a simple script..." \
+ && echo 'io:format("escript test~n").' > /tmp/test.escript \
+ && /opt/erlang/bin/escript /tmp/test.escript
 
 ######### Stage 2 - Build Semaphore tools #########
 FROM alpine:3.19 AS tools-builder
@@ -84,7 +86,10 @@ RUN echo "Checking what was copied from erlang-builder stage..." \
  && ls -la /opt/erlang/bin/escript || echo "escript not found"
 
 # Verify Erlang installation and escript availability
-RUN /opt/erlang/bin/escript --version
+RUN /opt/erlang/bin/erl -eval "erlang:halt()." -noshell \
+ && echo "Testing escript with a simple script..." \
+ && echo 'io:format("escript test~n").' > /tmp/test.escript \
+ && /opt/erlang/bin/escript /tmp/test.escript
 
 # Install additional Semaphore CI tools
 RUN echo "Installing additional semaphoreci tools" \
@@ -121,7 +126,8 @@ RUN rm -rf /root/.toolbox /usr/local/aws-cli/v2/current/dist/botocore/docs \
  && find /usr -name "*.pyc" -delete \
  && find /usr -name "__pycache__" -type d -exec rm -rf {} + || true \
  && echo "Verifying escript is still available after cleanup..." \
- && /opt/erlang/bin/escript --version \
+ && echo 'io:format("escript test~n").' > /tmp/test.escript \
+ && /opt/erlang/bin/escript /tmp/test.escript \
  && echo "Verifying other Erlang binaries..." \
  && /opt/erlang/bin/erl -eval "erlang:halt()." -noshell \
  && /opt/erlang/bin/erlc -help | head -1
