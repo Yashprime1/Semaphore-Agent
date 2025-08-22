@@ -45,7 +45,7 @@ apt-get -o DPkg::Lock::Timeout=300 install -y build-essential autoconf libtool
 # Install AWS CLI
 python3 -m venv prod-venv
 source prod-venv/bin/activate
-pip3 install awscli --upgrade --user
+pip3 install awscli --upgrade
 deactivate
 
 # Install Java versions
