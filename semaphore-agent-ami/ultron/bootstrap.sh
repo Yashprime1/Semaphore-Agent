@@ -20,16 +20,6 @@ export JAVA_VERSION_MAJOR=8
 export JAVA_VERSION_MINOR=332
 export JAVA_VERSION_BUILD=08.1
 
-instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-security_group_id=$(curl -s http://169.254.169.254/latest/meta-data/security-groups | cut -d ' ' -f 1)
-key_pair_name=$(curl -s http://169.254.169.254/latest/meta-data/public-keys/0/openssh-key | cut -d ' ' -f 3)
-region=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
-
-aws ec2 create-tags --resources $instance_id --region $region --tags \
-  Key=packer-name,Value=semaphore-agent-ami-builder \
-  Key=instance-id,Value=$instance_id \
-  Key=security-group,Value=$security_group_id \
-  Key=key-pair,Value=$key_pair_name
 
 
 apt-get -o DPkg::Lock::Timeout=300 update -y
@@ -90,7 +80,7 @@ curl -s https://dl.google.com/go/go1.19.3.linux-amd64.tar.gz| tar -v -C /opt/ -x
 curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Download and install jq
-aws s3 cp s3://system-sharedresources-ssms3bucket-fp7gg9zzae0f/semaphore-agent/jq/jq-1.7.1.tar .
+aws s3 cp s3://system-sharedresources-ssms3bucket-c9efl1zhhz4x/semaphore-agent/jq/jq-1.7.1.tar .
 tar -xvf jq-1.7.1.tar
 cd jq-1.7.1
 apt-get install -y autoconf libtool build-essential
@@ -129,26 +119,5 @@ echo "semaphore           hard    nofile          900000" >> /etc/security/limit
 
 mkdir -p /home/semaphore/semaphore-agent-home/logs
 chown -R semaphore:users /home/semaphore/semaphore-agent-home
-wget https://github.com/prometheus/node_exporter/releases/download/v1.8.1/node_exporter-1.8.1.linux-amd64.tar.gz
-tar xvfz node_exporter-1.8.1.linux-amd64.tar.gz
-mv node_exporter-1.8.1.linux-amd64/node_exporter /usr/local/bin/
-rm -rf node_exporter-1.8.1.linux-amd64*
-bash -c 'cat > /etc/systemd/system/node_exporter.service <<EOF
-[Unit]
-Description=Node Exporter
-After=network.target
-
-[Service]
-User=nobody
-ExecStart=/usr/local/bin/node_exporter --web.listen-address=:8090
-
-[Install]
-WantedBy=multi-user.target
-EOF'
-sudo systemctl daemon-reload
-sudo systemctl unmask node_exporter
-sudo systemctl enable node_exporter
-sudo systemctl start node_exporter
-echo "Bootstrapped semaphore agent"
 
 echo "Ultron bootstrap completed successfully!"
