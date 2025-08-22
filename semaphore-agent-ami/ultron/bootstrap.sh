@@ -20,6 +20,13 @@ export JAVA_VERSION_MAJOR=8
 export JAVA_VERSION_MINOR=332
 export JAVA_VERSION_BUILD=08.1
 
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+instance_id=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)
+security_group_id=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/security-groups | cut -d ' ' -f 1)
+key_pair_name=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/public-keys/0/openssh-key | cut -d ' ' -f 3)
+region=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/region)
+
 # Update package lists first
 apt-get -o DPkg::Lock::Timeout=300 update -y
 
@@ -47,6 +54,13 @@ python3 -m venv prod-venv
 source prod-venv/bin/activate
 pip3 install awscli --upgrade
 deactivate
+
+# Add tags to the packer instance
+aws ec2 create-tags --resources $instance_id --region $region --tags \
+  Key=packer-name,Value=semaphore-agent-ami-builder \
+  Key=instance-id,Value=$instance_id \
+  Key=security-group,Value=$security_group_id \
+  Key=key-pair,Value=$key_pair_name
 
 # Install Java versions
 wget https://corretto.aws/downloads/resources/${JAVA_VERSION_MAJOR}.${JAVA_VERSION_MINOR}.${JAVA_VERSION_BUILD}/amazon-corretto-${JAVA_VERSION_MAJOR}.${JAVA_VERSION_MINOR}.${JAVA_VERSION_BUILD}-linux-x64.tar.gz >> /dev/null  \
@@ -110,7 +124,7 @@ touch /etc/profile.d/semaphore.sh
 chmod 644 /etc/profile.d/semaphore.sh
 
 # Set Java and Maven environment variables
-echo "export JAVA_HOME=/opt/amazon-corretto-8.332.08.1-linux-x64" > /etc/profile.d/semaphore.sh
+echo "export JAVA_HOME=/opt/amazon-corretto-8.332.08.1-linux-x64" >> /etc/profile.d/semaphore.sh
 echo "export M2_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
 echo "export MAVEN_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
 echo "Fix semaphore agent heap size(XMX)"
