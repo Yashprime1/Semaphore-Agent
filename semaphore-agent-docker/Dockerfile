@@ -20,10 +20,10 @@ RUN apk add --no-cache --virtual .build-deps \
     --without-cosTransactions --without-cosEvent --without-cosTime \
     --without-cosNotification --without-cosProperty --without-cosFileTransfer --without-cosEventDomain \
     --without-diameter --without-eldap --without-erl_docgen --without-ftp \
-    --without-jinterface --without-megaco --without-odbc --without-reltool \
+    --without-jinterface --without-megaco --without-odbc \
     --without-ssh --without-tftp --without-typer --without-snmp \
     --without-mnesia --without-eunit --without-common_test \
-    --without-dialyzer --without-xmerl --without-parsetools --without-syntax_tools \
+    --without-dialyzer --without-xmerl \
     --without-runtime_tools --without-inets --without-edoc \
     --enable-shared-zlib --enable-static-drivers \
  && make -j"$(nproc)" && make install \
