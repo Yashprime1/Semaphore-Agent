@@ -30,6 +30,8 @@ mv spc /usr/local/bin/
 chmod +x /usr/local/bin/spc
 
 echo "Installing Erlang..."
+apt-get -o DPkg::Lock::Timeout=300 install -f -y
+apt-get -o DPkg::Lock::Timeout=300 install -y --allow-change-held-packages linux-libc-dev
 apt-get -o DPkg::Lock::Timeout=300 install -y build-essential autoconf libtool
 curl -L https://github.com/erlang/otp/releases/download/OTP-26.1.2/otp_src_26.1.2.tar.gz | tar -xz
 cd otp_src_26.1.2
