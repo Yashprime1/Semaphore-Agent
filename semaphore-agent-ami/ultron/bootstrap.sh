@@ -93,6 +93,10 @@ wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool
   && apt install -y /tmp/chrome.deb \
   && rm /tmp/chrome.deb
 
+# Install Node.js and npm
+curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+apt-get install -y nodejs
+
 # Install Yarn
 npm install --global yarn
 
