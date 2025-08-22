@@ -113,7 +113,11 @@ echo "export JAVA_HOME=/opt/amazon-corretto-8.332.08.1-linux-x64" > /etc/profile
 echo "export M2_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
 echo "export MAVEN_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
 echo "Fix semaphore agent heap size(XMX)"
-sed -i 's@.*MARKER.*@sed -i "s/-Xmx256m/-Xmx1g/" $startupScript@' /opt/semaphore-agent/bin/semaphore-agent
+if [ -f "/opt/semaphore-agent/bin/semaphore-agent" ]; then
+  sed -i 's@.*MARKER.*@sed -i "s/-Xmx256m/-Xmx1g/" $startupScript@' /opt/semaphore-agent/bin/semaphore-agent
+else
+  echo "Warning: semaphore-agent not found at /opt/semaphore-agent/bin/semaphore-agent"
+fi
 
 echo 'export PATH=/opt/amazon-corretto-11.0.19.7.1-linux-x64/bin:/opt/apache-maven-3.9.4/bin:$PATH' >> /etc/profile.d/semaphore.sh
 
