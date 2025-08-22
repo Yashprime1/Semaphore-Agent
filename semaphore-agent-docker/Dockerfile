@@ -1,12 +1,12 @@
 ######### Stage 1 - Build Erlang runtime #########
-FROM alpine:3.19 AS erlang-builder
+FROM ubuntu:24.04 AS erlang-builder
 
 ARG OTP_VERSION=28.0.1
+ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apk add --no-cache --virtual .build-deps \
-    build-base curl autoconf ncurses-dev openssl-dev zlib-dev perl \
- && apk add --no-cache \
-    ncurses-libs libstdc++ libgcc \
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+    build-essential curl autoconf libncurses5-dev libssl-dev zlib1g-dev \
  && curl -fsSL https://github.com/erlang/otp/releases/download/OTP-${OTP_VERSION}/otp_src_${OTP_VERSION}.tar.gz \
     | tar -xz \
  && cd otp_src_${OTP_VERSION} \
@@ -17,10 +17,27 @@ RUN apk add --no-cache --virtual .build-deps \
     --disable-hipe \
     --disable-sctp \
     --disable-observer \
+    --without-odbc \
+    --without-jinterface \
+    --without-wx \
+    --without-debugger \
+    --without-et \
+    --without-gs \
+    --without-toolbar \
+    --without-megaco \
+    --without-typer \
+    --without-common_test \
+    --without-eunit \
+    --without-reltool \
+    --without-dialyzer \
+    --without-erts_docs \
+    --without-erl_docgen \
     --enable-shared-zlib --enable-static-drivers \
  && make -j"$(nproc)" && make install \
  && cd .. && rm -rf otp_src_${OTP_VERSION} \
- && apk del .build-deps \
+ && apt-get purge -y build-essential autoconf \
+ && apt-get autoremove -y && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
  && rm -rf /opt/erlang/lib/erlang/lib/*/src \
            /opt/erlang/lib/erlang/lib/*/doc \
            /opt/erlang/lib/erlang/lib/*/examples \
@@ -33,18 +50,23 @@ RUN apk add --no-cache --virtual .build-deps \
  && /opt/erlang/bin/escript /tmp/test.escript
 
 ######### Stage 2 - Build Semaphore tools #########
-FROM alpine:3.19 AS tools-builder
+FROM ubuntu:24.04 AS tools-builder
 
 ARG SEM_CLI_VERSION=0.32.0
 ARG TOOLBOX_VERSION=1.28.0
+ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apk add --no-cache curl \
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
  && curl -fsSL https://github.com/semaphoreci/cli/releases/download/v${SEM_CLI_VERSION}/sem_Linux_x86_64.tar.gz \
     | tar -xz \
  && mkdir -p /toolbox \
  && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v${TOOLBOX_VERSION}/self-hosted-linux.tar \
     | tar -x -C /toolbox --strip-components=1 \
- && find /toolbox -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
+ && find /toolbox -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true \
+ && apt-get purge -y curl \
+ && apt-get autoremove -y && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ######### Stage 3 - Extract Agent  #########
 FROM semaphoreci/agent:v2.3.0 AS agent-extractor
@@ -86,7 +108,9 @@ COPY --from=tools-builder /toolbox /home/semaphore/.toolbox
 RUN echo "Checking what was copied from erlang-builder stage..." \
  && ls -la /opt/erlang/bin/ || echo "Directory not found" \
  && echo "Checking if escript exists..." \
- && ls -la /opt/erlang/bin/escript || echo "escript not found"
+ && ls -la /opt/erlang/bin/escript || echo "escript not found" \
+ && echo "Checking ERTS directory..." \
+ && ls -la /opt/erlang/lib/erlang/erts-*/bin/ || echo "ERTS directory not found"
 
 # Verify Erlang installation and escript availability
 RUN /opt/erlang/bin/erl -eval "erlang:halt()." -noshell \
