@@ -1,5 +1,5 @@
 ######### Stage 1 - Build Erlang runtime #########
-FROM alpine:3.18 AS erlang-builder
+FROM alpine:3.19 AS erlang-builder
 
 ARG OTP_VERSION=28.0.1
 
@@ -21,10 +21,14 @@ RUN apk add --no-cache --virtual .build-deps \
  && apk del .build-deps \
  && rm -rf /opt/erlang/lib/erlang/lib/*/src \
            /opt/erlang/lib/erlang/lib/*/doc \
-           /opt/erlang/lib/erlang/lib/*/examples
+           /opt/erlang/lib/erlang/lib/*/examples \
+ && echo "Verifying Erlang installation in builder stage..." \
+ && ls -la /opt/erlang/bin/ \
+ && /opt/erlang/bin/escript --version \
+ && /opt/erlang/bin/erl -eval "erlang:halt()." -noshell
 
 ######### Stage 2 - Build Semaphore tools #########
-FROM alpine:3.18 AS tools-builder
+FROM alpine:3.19 AS tools-builder
 
 ARG SEM_CLI_VERSION=0.32.0
 ARG TOOLBOX_VERSION=1.28.0
@@ -73,6 +77,12 @@ COPY --from=erlang-builder /opt/erlang /opt/erlang
 COPY --from=tools-builder /sem /usr/local/bin/sem
 COPY --from=tools-builder /toolbox /home/semaphore/.toolbox
 
+# Debug: Check what was copied
+RUN echo "Checking what was copied from erlang-builder stage..." \
+ && ls -la /opt/erlang/bin/ || echo "Directory not found" \
+ && echo "Checking if escript exists..." \
+ && ls -la /opt/erlang/bin/escript || echo "escript not found"
+
 # Verify Erlang installation and escript availability
 RUN /opt/erlang/bin/escript --version
 
@@ -109,7 +119,12 @@ RUN rm -rf /root/.toolbox /usr/local/aws-cli/v2/current/dist/botocore/docs \
  && find /usr -name "*.a" -delete \
  && find /usr -name "*.la" -delete \
  && find /usr -name "*.pyc" -delete \
- && find /usr -name "__pycache__" -type d -exec rm -rf {} + || true
+ && find /usr -name "__pycache__" -type d -exec rm -rf {} + || true \
+ && echo "Verifying escript is still available after cleanup..." \
+ && /opt/erlang/bin/escript --version \
+ && echo "Verifying other Erlang binaries..." \
+ && /opt/erlang/bin/erl -eval "erlang:halt()." -noshell \
+ && /opt/erlang/bin/erlc -help | head -1
 
 USER $USER
 WORKDIR $HOME
