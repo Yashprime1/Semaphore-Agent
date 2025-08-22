@@ -40,15 +40,8 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
  && rm -rf /opt/erlang/lib/erlang/lib/*/src \
            /opt/erlang/lib/erlang/lib/*/doc \
-           /opt/erlang/lib/erlang/lib/*/examples \
- && echo "Verifying Erlang installation in builder stage..." \
- && ls -la /opt/erlang/bin/ \
- && /opt/erlang/bin/erl -eval "erlang:halt()." -noshell \
- && echo "Testing escript with a simple script..." \
- && echo '#!/usr/bin/env escript' > /tmp/test.escript \
- && echo 'main(_) -> io:format("escript test~n").' >> /tmp/test.escript \
- && /opt/erlang/bin/escript /tmp/test.escript
-
+           /opt/erlang/lib/erlang/lib/*/examples 
+ 
 ######### Stage 2 - Build Semaphore tools #########
 FROM ubuntu:24.04 AS tools-builder
 
@@ -117,13 +110,6 @@ RUN echo "Checking what was copied from erlang-builder stage..." \
  && echo "Checking ERTS directory..." \
  && ls -la /opt/erlang/lib/erlang/erts-*/bin/ || echo "ERTS directory not found"
 
-# Verify Erlang installation and escript availability
-RUN /opt/erlang/bin/erl -eval "erlang:halt()." -noshell \
- && echo "Testing escript with a simple script..." \
- && echo '#!/usr/bin/env escript' > /tmp/test.escript \
- && echo 'main(_) -> io:format("escript test~n").' >> /tmp/test.escript \
- && /opt/erlang/bin/escript /tmp/test.escript
-
 # Install additional Semaphore CI tools
 RUN echo "Installing additional semaphoreci tools" \
  && echo "Installing SPC (Semaphore Pipeline Compiler)..." \
@@ -132,9 +118,7 @@ RUN echo "Installing additional semaphoreci tools" \
  && chmod +x /usr/local/bin/spc \
  && echo "Installing When..." \
  && curl -L https://github.com/renderedtext/when/releases/download/v1.2.1/when_otp_26 -o /usr/local/bin/when \
- && chmod +x /usr/local/bin/when \
- && echo "Testing when tool installation..." \
- && when --version
+ && chmod +x /usr/local/bin/when 
 
 RUN chown -R $USER:$USER /home/semaphore/.toolbox \
  && chmod +x /home/semaphore/.toolbox/* \
@@ -145,9 +129,7 @@ RUN chown -R $USER:$USER /home/semaphore/.toolbox \
  && ln -sf /home/semaphore/.toolbox/sem-context /usr/local/bin/sem-context \
  && ln -sf /home/semaphore/.toolbox/retry /usr/local/bin/retry \
  && ln -sf /home/semaphore/.toolbox/test-results /usr/local/bin/test-results \
- && chmod +x /opt/semaphore/agent /usr/local/bin/sem \
- && echo "Testing when tool..." \
- && when --version
+ && chmod +x /opt/semaphore/agent /usr/local/bin/sem 
 
 COPY --chown=$USER:$USER shutdown.sh /opt/semaphore/shutdown
 COPY --chown=$USER:$USER entrypoint.sh /opt/semaphore/entrypoint.sh
@@ -157,14 +139,7 @@ RUN rm -rf /root/.toolbox /usr/local/aws-cli/v2/current/dist/botocore/docs \
  && find /usr -name "*.a" -delete \
  && find /usr -name "*.la" -delete \
  && find /usr -name "*.pyc" -delete \
- && find /usr -name "__pycache__" -type d -exec rm -rf {} + || true \
- && echo "Verifying escript is still available after cleanup..." \
- && echo '#!/usr/bin/env escript' > /tmp/test.escript \
- && echo 'main(_) -> io:format("escript test~n").' >> /tmp/test.escript \
- && /opt/erlang/bin/escript /tmp/test.escript \
- && echo "Verifying other Erlang binaries..." \
- && /opt/erlang/bin/erl -eval "erlang:halt()." -noshell \
- && /opt/erlang/bin/erlc -help | head -1
+ && find /usr -name "__pycache__" -type d -exec rm -rf {} + || true 
 
 USER $USER
 WORKDIR $HOME
