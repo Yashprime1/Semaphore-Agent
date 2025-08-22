@@ -1,3 +1,19 @@
+set -ex pipefail
+
+# Set environment variables for non-interactive installation
+export DEBIAN_FRONTEND=noninteractive
+export DEBCONF_NONINTERACTIVE_SEEN=true
+
+# Function to handle errors
+error_handler() {
+    echo "ERROR: Script failed at line $1"
+    echo "Command that failed: $2"
+    exit 1
+}
+
+# Set up error handling
+trap 'error_handler ${LINENO} "$BASH_COMMAND"' ERR
+
 echo "Installing build dependencies"
 
 export JAVA_VERSION_MAJOR=8
@@ -22,7 +38,7 @@ apt-get -o DPkg::Lock::Timeout=300 remove vim -y
 
 apt-get -o DPkg::Lock::Timeout=300 install -y curl git openssl wget unzip ffmpeg
 
-apt-get -o DPkg::Lock::Timeout=300 install -y python3-pip python3-dev python3-setuptools
+apt-get -o DPkg::Lock::Timeout=300 install -y python3-pip python3-dev python3-venv python3-setuptools
 apt-get -o DPkg::Lock::Timeout=300 install -y python3-pip --fix-missing
 
 
@@ -32,7 +48,12 @@ apt-get -o DPkg::Lock::Timeout=300 install --only-upgrade snapd policykit-1 libc
 #packages need with some libraries to allow running browsers in headless mode
 apt-get -o DPkg::Lock::Timeout=300 install -y libgbm-dev libxcomposite-dev libxrandr-dev libxkbcommon-dev libpangocairo-1.0-0 libatk1.0-0 libatk-bridge2.0-0
 ####
+
+# Install aws cli
+python3 -m venv prod-venv
+source prod-venv/bin/activate
 pip3 install awscli --upgrade --user
+deactivate
 
 wget https://corretto.aws/downloads/resources/${JAVA_VERSION_MAJOR}.${JAVA_VERSION_MINOR}.${JAVA_VERSION_BUILD}/amazon-corretto-${JAVA_VERSION_MAJOR}.${JAVA_VERSION_MINOR}.${JAVA_VERSION_BUILD}-linux-x64.tar.gz >> /dev/null  \
     &&  tar -xzf amazon-corretto-${JAVA_VERSION_MAJOR}.${JAVA_VERSION_MINOR}.${JAVA_VERSION_BUILD}-linux-x64.tar.gz -C /opt \
@@ -44,7 +65,7 @@ cd /tmp  \
     &&  tar -xzf amazon-corretto-11.0.19.7.1-linux-x64.tar.gz -C /opt \
     &&  rm -rf amazon-corretto-11.0.19.7.1-linux-x64.tar.gz
 
-curl --silent https://corretto.aws/downloads/resources/17.0.6.10.1/amazon-corretto-17.0.6.10.1-linux-x64.tar.gz |  tar -C /opt -xzf - && mv /opt/amazon-corretto-17.0.6.10.1-linux-x64 /opt/amazon-corretto-17-linux-x64
+curl --silent https://corretto.aws/downloads/resources/17.0.1.12.1/amazon-corretto-17.0.1.12.1-linux-x64.tar.gz |  tar -C /opt -xzf - && mv /opt/amazon-corretto-17.0.1.12.1-linux-x64 /opt/amazon-corretto-17-linux-x64
 
 curl --silent https://corretto.aws/downloads/resources/18.0.2.9.1/amazon-corretto-18.0.2.9.1-linux-x64.tar.gz |  tar -C /opt -xzf - && mv /opt/amazon-corretto-18.0.2.9.1-linux-x64 /opt/amazon-corretto-18-linux-x64
 
@@ -69,7 +90,7 @@ curl -s https://dl.google.com/go/go1.19.3.linux-amd64.tar.gz| tar -v -C /opt/ -x
 curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Download and install jq
-aws s3 cp s3://system-sharedresources-ssms3bucket-w1ud0dbtcbgk/semaphore-agent/jq/jq-1.7.1.tar .
+aws s3 cp s3://system-sharedresources-ssms3bucket-fp7gg9zzae0f/semaphore-agent/jq/jq-1.7.1.tar .
 tar -xvf jq-1.7.1.tar
 cd jq-1.7.1
 apt-get install -y autoconf libtool build-essential
@@ -84,15 +105,7 @@ wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool
   && apt install -y /tmp/chrome.deb \
   && rm /tmp/chrome.deb
 
-# Download and install NodeJS.
-aws s3 cp s3://system-sharedresources-ssms3bucket-w1ud0dbtcbgk/semaphore-agent/node-v14-18-2/node-v14.18.2-linux-x64.tar - |  tar -v -xz -C /opt/
-aws s3 cp s3://system-sharedresources-ssms3bucket-w1ud0dbtcbgk/semaphore-agent/node-v18-18-2/node-v18.18.2-linux-x64.tar - |  tar -v -xz -C /opt/
-aws s3 cp s3://system-sharedresources-ssms3bucket-w1ud0dbtcbgk/semaphore-agent/node-v20-10-0/node-v20.10.0-linux-x64.tar - |  tar -v -xz -C /opt/
-export PATH=$PATH:/opt/node-v14.18.2-linux-x64/bin
-export PATH=$PATH:/opt/node-v20.10.0-linux-x64/bin
 npm install --global yarn
-echo 'export PATH=/opt/node-v14.18.2-linux-x64/bin:$PATH' >> /etc/profile.d/semaphore.sh
-echo 'export PATH=/opt/node-v20.10.0-linux-x64/bin:$PATH' >> /etc/profile.d/semaphore.sh
 
 curl -fL https://getcli.jfrog.io | sh &&  mv jfrog /usr/bin/ &&  chmod +x /usr/bin/jfrog
 
@@ -107,14 +120,6 @@ echo 'export PATH=/opt/amazon-corretto-11.0.19.7.1-linux-x64/bin:/opt/apache-mav
 
 echo "Add private key to semaphore home directory"
 echo "export MAVEN_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
-
-# Source the environment and create override
-source /etc/profile.d/semaphore.sh
-sudo tee /etc/systemd/system/semaphore-agent.service.d/environment.conf << EOF
-[Service]
-Environment="MAVEN_HOME=$MAVEN_HOME"
-Environment="PATH=$PATH"
-EOF
 echo "Setting maven home"
 echo "fs.file-max=1000000" >> /etc/sysctl.conf
 ls -lrth /etc/sysctl.conf
@@ -145,3 +150,5 @@ sudo systemctl unmask node_exporter
 sudo systemctl enable node_exporter
 sudo systemctl start node_exporter
 echo "Bootstrapped semaphore agent"
+
+echo "Ultron bootstrap completed successfully!"

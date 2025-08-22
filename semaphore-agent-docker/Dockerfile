@@ -58,11 +58,16 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
+ && echo "Downloading sem CLI..." \
  && curl -fsSL https://github.com/semaphoreci/cli/releases/download/v${SEM_CLI_VERSION}/sem_Linux_x86_64.tar.gz \
     | tar -xz \
+ && echo "Creating toolbox directory..." \
  && mkdir -p /toolbox \
+ && echo "Downloading toolbox..." \
  && curl -fsSL https://github.com/semaphoreci/toolbox/releases/download/v${TOOLBOX_VERSION}/self-hosted-linux.tar \
     | tar -x -C /toolbox --strip-components=1 \
+ && echo "Verifying toolbox installation..." \
+ && ls -la /toolbox/ \
  && find /toolbox -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true \
  && apt-get purge -y curl \
  && apt-get autoremove -y && apt-get clean \
