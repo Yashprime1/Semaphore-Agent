@@ -26,6 +26,10 @@ apt-get -o DPkg::Lock::Timeout=300 update -y
 # Remove vim if present
 apt-get -o DPkg::Lock::Timeout=300 remove vim -y || true
 
+# Fix any broken packages and install essential dependencies
+apt-get -o DPkg::Lock::Timeout=300 install -f -y
+apt-get -o DPkg::Lock::Timeout=300 install -y linux-libc-dev
+
 # Install basic packages first
 apt-get -o DPkg::Lock::Timeout=300 install -y curl git openssl wget unzip ffmpeg
 
