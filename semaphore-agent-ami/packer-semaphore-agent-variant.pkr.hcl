@@ -8,6 +8,16 @@ variable "aws_region" {
   default = "eu-west-1"
 }
 
+variable "aws_access_key_id" {
+  type    = string
+  default = ""
+}
+
+variable "aws_secret_access_key" {
+  type    = string
+  default = ""
+}
+
 source "amazon-ebs" "with-tools" {
   ami_name      = "semaphore-agent-with-tools-{{timestamp}}"
   instance_type = "t2.micro"
@@ -21,6 +31,9 @@ source "amazon-ebs" "with-tools" {
     volume_type = "gp3"
     delete_on_termination = true
   }
+  
+  access_key = var.aws_access_key_id
+  secret_key = var.aws_secret_access_key
 }
 
 source "amazon-ebs" "with-tools-ultron" {
@@ -36,6 +49,9 @@ source "amazon-ebs" "with-tools-ultron" {
     volume_type = "gp3"
     delete_on_termination = true
   }
+  
+  access_key = var.aws_access_key_id
+  secret_key = var.aws_secret_access_key
 }
 
 build {

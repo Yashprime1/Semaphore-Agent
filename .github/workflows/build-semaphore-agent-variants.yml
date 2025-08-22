@@ -29,7 +29,7 @@ jobs:
   #       id: build_default_ami
   #       run: |
   #         make packer.init
-  #         make packer.build.linux INSTALL_ERLANG=true AMI_INSTANCE_TYPE=t2.micro AMI_ARCH=x86_64 AWS_REGION=${{ github.event.inputs.Region || 'eu-west-1' }} AMI_PREFIX=semaphore-agent-${{ github.run_id }} TOOLBOX_VERSION=v1.26.0 | tee packer_output.log
+  #         make packer.build.linux INSTALL_ERLANG=true AMI_INSTANCE_TYPE=t2.micro AMI_ARCH=x86_64 AWS_REGION=${{ github.event.inputs.Region || 'eu-west-1' }} AMI_PREFIX=semaphore-agent-${{ github.run_id }} TOOLBOX_VERSION=v1.26.0 AWS_ACCESS_KEY_ID=${{ secrets.BUILD_AWS_ACCESS_KEY_ID }} AWS_SECRET_ACCESS_KEY=${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }} | tee packer_output.log
   #       env:
   #         AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
   #         AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
@@ -59,7 +59,7 @@ jobs:
         id: build_variants
         run: |
           packer init semaphore-agent-ami/packer-semaphore-agent-variant.pkr.hcl
-          packer build -var "default_agent_ami=ami-04386ae9181be4588" -var "aws_region=${{ github.event.inputs.Region || 'eu-west-1' }}" semaphore-agent-ami/packer-semaphore-agent-variant.pkr.hcl | tee packer_variants_output.log
+          packer build -var "default_agent_ami=ami-04386ae9181be4588" -var "aws_region=${{ github.event.inputs.Region || 'eu-west-1' }}" -var "aws_access_key_id=${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}" -var "aws_secret_access_key=${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}" semaphore-agent-ami/packer-semaphore-agent-variant.pkr.hcl | tee packer_variants_output.log
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
