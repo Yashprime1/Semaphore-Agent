@@ -83,16 +83,10 @@ curl -s https://dl.google.com/go/go1.19.3.linux-amd64.tar.gz| tar -v -C /opt/ -x
 # Install Azure CLI
 curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
-# Download and install jq
-aws s3 cp s3://system-sharedresources-ssms3bucket-c9efl1zhhz4x/semaphore-agent/jq/jq-1.7.1.tar .
-
-tar -xvf jq-1.7.1.tar
-cd jq-1.7.1
-autoreconf -i
-./configure
-make
-make install
-ln -s /usr/local/bin/jq /usr/bin/jq
+# Install jq from official source (version 1.7.1)
+curl -L https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux64 -o /usr/local/bin/jq
+chmod +x /usr/local/bin/jq
+ln -sf /usr/local/bin/jq /usr/bin/jq
 
 # Install Google Chrome for test cafe
 wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_135.0.7049.114-1_amd64.deb \
