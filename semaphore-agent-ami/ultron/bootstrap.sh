@@ -20,35 +20,34 @@ export JAVA_VERSION_MAJOR=8
 export JAVA_VERSION_MINOR=332
 export JAVA_VERSION_BUILD=08.1
 
-
-
+# Update package lists first
 apt-get -o DPkg::Lock::Timeout=300 update -y
 
-apt-get -o DPkg::Lock::Timeout=300 remove vim -y
+# Remove vim if present
+apt-get -o DPkg::Lock::Timeout=300 remove vim -y || true
 
+# Install basic packages first
 apt-get -o DPkg::Lock::Timeout=300 install -y curl git openssl wget unzip ffmpeg
 
+# Install Python packages
 apt-get -o DPkg::Lock::Timeout=300 install -y python3-pip python3-dev python3-venv python3-setuptools
-apt-get -o DPkg::Lock::Timeout=300 install -y python3-pip --fix-missing
 
-
-#apt-get install --only-upgrade snapd libssl1.0.0 policykit-1 libc-dev-bin libc-bin libc6 libc6-dev locales multiarch-support -y
-apt-get -o DPkg::Lock::Timeout=300 install --only-upgrade snapd policykit-1 libc-dev-bin libc-bin libc6 libc6-dev locales -y
-
-#packages need with some libraries to allow running browsers in headless mode
+# Install system libraries for headless browser support
 apt-get -o DPkg::Lock::Timeout=300 install -y libgbm-dev libxcomposite-dev libxrandr-dev libxkbcommon-dev libpangocairo-1.0-0 libatk1.0-0 libatk-bridge2.0-0
-####
 
-# Install aws cli
+# Install build tools and development libraries
+apt-get -o DPkg::Lock::Timeout=300 install -y build-essential autoconf libtool
+
+# Install AWS CLI
 python3 -m venv prod-venv
 source prod-venv/bin/activate
 pip3 install awscli --upgrade --user
 deactivate
 
+# Install Java versions
 wget https://corretto.aws/downloads/resources/${JAVA_VERSION_MAJOR}.${JAVA_VERSION_MINOR}.${JAVA_VERSION_BUILD}/amazon-corretto-${JAVA_VERSION_MAJOR}.${JAVA_VERSION_MINOR}.${JAVA_VERSION_BUILD}-linux-x64.tar.gz >> /dev/null  \
     &&  tar -xzf amazon-corretto-${JAVA_VERSION_MAJOR}.${JAVA_VERSION_MINOR}.${JAVA_VERSION_BUILD}-linux-x64.tar.gz -C /opt \
     &&  rm -rf amazon-corretto-${JAVA_VERSION_MAJOR}.${JAVA_VERSION_MINOR}.${JAVA_VERSION_BUILD}-linux-x64.tar.gz
-
 
 cd /tmp  \
     && wget https://corretto.aws/downloads/resources/11.0.19.7.1/amazon-corretto-11.0.19.7.1-linux-x64.tar.gz >> /dev/null  \
@@ -59,44 +58,47 @@ curl --silent https://corretto.aws/downloads/resources/17.0.1.12.1/amazon-corret
 
 curl --silent https://corretto.aws/downloads/resources/18.0.2.9.1/amazon-corretto-18.0.2.9.1-linux-x64.tar.gz |  tar -C /opt -xzf - && mv /opt/amazon-corretto-18.0.2.9.1-linux-x64 /opt/amazon-corretto-18-linux-x64
 
-#installing firefox for test cafe
+# Install Firefox for test cafe
 mkdir -p /usr/lib/firefox
 wget --no-verbose https://ftp.mozilla.org/pub/firefox/releases/130.0/linux-x86_64/en-US/firefox-130.0.tar.bz2
 tar -xjf firefox-130.0.tar.bz2 -C /usr/lib/firefox
 ln -s /usr/lib/firefox/firefox/firefox /usr/bin/firefox
 rm -rf firefox-130.0.tar.bz2
 
-
-#installing git lfs latest version
+# Install git lfs
 curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
 apt-get install git-lfs
 git lfs install
 
+# Install Apache Ant
 curl -s https://archive.apache.org/dist/ant/binaries/apache-ant-1.9.3-bin.tar.gz |   tar -v -xz -C /opt/
 
+# Install Go
 curl -s https://dl.google.com/go/go1.19.3.linux-amd64.tar.gz| tar -v -C /opt/ -xz
 
-# Install Azure CLI - this is NOT meant to talk to Azure, but rather to talk to Azurite in order to facilitate an OAuth token exchange.
+# Install Azure CLI
 curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Download and install jq
 aws s3 cp s3://system-sharedresources-ssms3bucket-c9efl1zhhz4x/semaphore-agent/jq/jq-1.7.1.tar .
+
 tar -xvf jq-1.7.1.tar
 cd jq-1.7.1
-apt-get install -y autoconf libtool build-essential
 autoreconf -i
 ./configure
 make
 make install
 ln -s /usr/local/bin/jq /usr/bin/jq
 
-#installing google chrome headless for test cafe
+# Install Google Chrome for test cafe
 wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_135.0.7049.114-1_amd64.deb \
   && apt install -y /tmp/chrome.deb \
   && rm /tmp/chrome.deb
 
+# Install Yarn
 npm install --global yarn
 
+# Install JFrog CLI
 curl -fL https://getcli.jfrog.io | sh &&  mv jfrog /usr/bin/ &&  chmod +x /usr/bin/jfrog
 
 echo "Set maven, java and ant home directories in PATH"
