@@ -104,17 +104,19 @@ npm install --global yarn
 curl -fL https://getcli.jfrog.io | sh &&  mv jfrog /usr/bin/ &&  chmod +x /usr/bin/jfrog
 
 echo "Set maven, java and ant home directories in PATH"
-sed -i 's/^export JAVA_HOME.*/export JAVA_HOME=\/opt\/amazon-corretto-8.332.08.1-linux-x64/' /etc/profile.d/semaphore.sh
-sed -i 's/^export M2_HOME.*/export M2_HOME=\/opt\/apache-maven-3.9.4/' /etc/profile.d/semaphore.sh
-sed -i 's/^export MAVEN_HOME.*/export MAVEN_HOME=\/opt\/apache-maven-3.9.4/' /etc/profile.d/semaphore.sh
+# Create the semaphore.sh file if it doesn't exist
+touch /etc/profile.d/semaphore.sh
+chmod 644 /etc/profile.d/semaphore.sh
+
+# Set Java and Maven environment variables
+echo "export JAVA_HOME=/opt/amazon-corretto-8.332.08.1-linux-x64" > /etc/profile.d/semaphore.sh
+echo "export M2_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
+echo "export MAVEN_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
 echo "Fix semaphore agent heap size(XMX)"
 sed -i 's@.*MARKER.*@sed -i "s/-Xmx256m/-Xmx1g/" $startupScript@' /opt/semaphore-agent/bin/semaphore-agent
 
 echo 'export PATH=/opt/amazon-corretto-11.0.19.7.1-linux-x64/bin:/opt/apache-maven-3.9.4/bin:$PATH' >> /etc/profile.d/semaphore.sh
 
-echo "Add private key to semaphore home directory"
-echo "export MAVEN_HOME=/opt/apache-maven-3.9.4" >> /etc/profile.d/semaphore.sh
-echo "Setting maven home"
 echo "fs.file-max=1000000" >> /etc/sysctl.conf
 ls -lrth /etc/sysctl.conf
 ls -lrth /etc/security/limits.conf
