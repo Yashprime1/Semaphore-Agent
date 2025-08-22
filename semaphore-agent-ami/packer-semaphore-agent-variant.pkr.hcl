@@ -14,6 +14,13 @@ source "amazon-ebs" "with-tools" {
   region        = var.aws_region
   source_ami    = var.default_agent_ami
   ssh_username  = "ubuntu"
+  
+  launch_block_device_mappings {
+    device_name = "/dev/sda1"
+    volume_size = 50
+    volume_type = "gp3"
+    delete_on_termination = true
+  }
 }
 
 source "amazon-ebs" "with-tools-ultron" {
@@ -22,6 +29,13 @@ source "amazon-ebs" "with-tools-ultron" {
   region        = var.aws_region
   source_ami    = var.default_agent_ami
   ssh_username  = "ubuntu"
+  
+  launch_block_device_mappings {
+    device_name = "/dev/sda1"
+    volume_size = 50
+    volume_type = "gp3"
+    delete_on_termination = true
+  }
 }
 
 build {
