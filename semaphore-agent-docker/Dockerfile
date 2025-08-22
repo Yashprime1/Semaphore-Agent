@@ -19,7 +19,6 @@ RUN apk add --no-cache --virtual .build-deps \
  && make -j"$(nproc)" && make install \
  && cd .. && rm -rf otp_src_${OTP_VERSION} \
  && apk del .build-deps \
- && find /opt/erlang -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true \
  && rm -rf /opt/erlang/lib/erlang/lib/*/src \
            /opt/erlang/lib/erlang/lib/*/doc \
            /opt/erlang/lib/erlang/lib/*/examples
