@@ -412,29 +412,6 @@
       "Value": {
         "Ref": "SplunkTokenSecretsManagerSecret"
       }
-    },
-    "BootstrapEc2InstanceIamProfileName": {
-      "Export": {
-        "Name": {
-          "Fn::Sub": "${AWS::StackName}-BootstrapEc2InstanceIamProfileName"
-        }
-      },
-      "Value": {
-        "Ref": "BootstrapEc2InstanceIamProfile"
-      }
-    },
-    "BootstrapEc2InstanceIamRoleArn": {
-      "Export": {
-        "Name": {
-          "Fn::Sub": "${AWS::StackName}-BootstrapEc2InstanceIamRoleArn"
-        }
-      },
-      "Value": {
-        "Fn::GetAtt": [
-          "BootstrapEc2InstanceIamRole",
-          "Arn"
-        ]
-      }
     }
   }
 }
