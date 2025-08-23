@@ -295,54 +295,6 @@
                   ]
                 }
               ]
-            },
-            {
-              "Sid": "AllowBootstrapScriptToAccessEC2Metadata",
-              "Effect": "Allow",
-              "Action": [
-                "ec2:DescribeInstances",
-                "ec2:DescribeInstanceAttribute",
-                "ec2:DescribeSecurityGroups",
-                "ec2:DescribeKeyPairs"
-              ],
-              "Resource": "*"
-            },
-            {
-              "Sid": "AllowBootstrapScriptToAccessEC2InstanceMetadata",
-              "Effect": "Allow",
-              "Action": [
-                "ec2:DescribeInstanceMetadataOptions"
-              ],
-              "Resource": "*"
-            },
-            {
-              "Sid": "AllowBootstrapScriptToTagOwnInstance",
-              "Effect": "Allow",
-              "Action": [
-                "ec2:CreateTags"
-              ],
-              "Resource": [
-                {
-                  "Fn::Join": [
-                    ":",
-                    [
-                      "arn:aws:ec2",
-                      {
-                        "Ref": "AWS::Region"
-                      },
-                      {
-                        "Ref": "AWS::AccountId"
-                      },
-                      "instance/*"
-                    ]
-                  ]
-                }
-              ],
-              "Condition": {
-                "StringEquals": {
-                  "ec2:ResourceTag/aws:autoscaling:groupName": "{{resolve:ssm:/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id}}"
-                }
-              }
             }
           ]
         },
