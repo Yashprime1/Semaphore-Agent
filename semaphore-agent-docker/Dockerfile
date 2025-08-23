@@ -90,7 +90,13 @@ RUN groupadd -g 3000 $USER \
  && curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip \
  && apt-get install -y unzip \
  && unzip awscliv2.zip \
+ && echo "Cleaning up any existing AWS CLI..." \
+ && rm -f /usr/local/bin/aws \
+ && echo "Installing AWS CLI..." \
  && ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
+ && echo "AWS CLI installation completed" \
+ && echo "Verifying AWS CLI installation..." \
+ && /usr/local/bin/aws --version \
  && rm -rf awscliv2.zip aws \
  && apt-get purge -y unzip \
  && apt-get autoremove -y && apt-get clean \
@@ -124,6 +130,8 @@ RUN chown -R $USER:$USER /home/semaphore/.toolbox \
  && chmod +x /home/semaphore/.toolbox/* \
  && echo '. /home/semaphore/.toolbox/libcheckout' >> /home/semaphore/.bashrc \
  && echo '. /home/semaphore/.toolbox/libchecksum' >> /home/semaphore/.bashrc \
+ && echo "Creating symbolic links for toolbox..." \
+ && rm -f /usr/local/bin/cache /usr/local/bin/artifact /usr/local/bin/sem-context /usr/local/bin/retry /usr/local/bin/test-results \
  && ln -sf /home/semaphore/.toolbox/cache /usr/local/bin/cache \
  && ln -sf /home/semaphore/.toolbox/artifact /usr/local/bin/artifact \
  && ln -sf /home/semaphore/.toolbox/sem-context /usr/local/bin/sem-context \
