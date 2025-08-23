@@ -170,7 +170,7 @@
           "Parameters": {
             "NetworkStack": "System-Network",
             "StackPrefix":"System",
-            "ContainerTag": "github-master-15",
+            "ContainerTag": "github-main-4",
             "Memory": "512",
             "Cpu": "256",
             "MinTasks": "0",
