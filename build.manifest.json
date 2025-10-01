@@ -42,6 +42,24 @@
           "StackPolicy": {}
         },
         {
+          "StackName": "System-Network-Nat-Network",
+          "DependsOn": [
+            "System-Network"
+          ],
+          "Action": "CREATE",
+          "TemplatePath": "templates/network/public-network.json",
+          "Parameters": {
+            "NetworkStack": "System-Network",
+            "EnablePublicAzAEc2Subnet": "True",
+            "PublicAzAEc2SubnetCidr": "2.0/24",
+            "EnablePublicAzBEc2Subnet": "True",
+            "PublicAzBEc2SubnetCidr": "3.0/24",
+            "EnablePublicAzCEc2Subnet": "True",
+            "PublicAzCEc2SubnetCidr": "6.0/24"
+          },
+          "StackPolicy": {}
+        },
+        {
           "StackName": "System-SecurityGroup",
           "Action": "CREATE",
           "TemplatePath": "templates/security-group/security-group.json",
@@ -179,6 +197,20 @@
             "MinimumHealthyPercent": "100",
             "DesiredCapacity": "0",
             "SemaphoreAgentScalerLambdaCodeS3Key": "lambda/agent-scaler/ecs_scaler.zip"
+          },
+          "StackPolicy": {}
+        },
+        {
+          "StackName": "System-Terraform-Agent",
+          "Action": "CREATE",
+          "TemplatePath": "cdk/cdk.out/System-Terraform-Agent.template.json",
+          "DependsOn": [
+            "System-Network",
+            "System-Network-Nat-Network",
+            "System-SharedResources"
+          ],
+          "Parameters": {
+            "ContainerTag": "1.10.0"
           },
           "StackPolicy": {}
         }
