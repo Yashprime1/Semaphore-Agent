@@ -682,6 +682,16 @@
       "Value": {
         "Ref": "VPCNetworkPrefix"
       }
+    },
+    "Ec2InternetGatewayId": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-InternetGatewayId"
+        }
+      },
+      "Value": {
+        "Ref": "Ec2InternetGateway"
+      }
     }
   }
 }
