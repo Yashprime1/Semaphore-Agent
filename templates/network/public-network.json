@@ -1,0 +1,555 @@
+{
+  "Description": "AWS CloudFormation template that defines all the necessary network resources for setting up CleverTap's stack. Supported availability zones are specified in the Mappings section.",
+  "Parameters": {
+    "NetworkStack": {
+      "Description": "Name of the stack that this stack references for networking and shared resources",
+      "Type": "String"
+    },
+    "PublicAzAEc2SubnetCidr": {
+      "Description": "Defines the last two octets of the Availability Zone A subnets CIDR range",
+      "Default": "",
+      "Type": "String"
+    },
+    "PublicAzBEc2SubnetCidr": {
+      "Description": "Defines the last two octets of the Availability Zone B subnets CIDR range",
+      "Default": "",
+      "Type": "String"
+    },
+    "PublicAzCEc2SubnetCidr": {
+      "Description": "Defines the last two octets of the Availability Zone C subnets CIDR range",
+      "Default": "",
+      "Type": "String"
+    },
+
+    "EnablePublicAzAEc2Subnet": {
+      "AllowedValues": [
+        "True",
+        "False"
+      ],
+      "Default": "False",
+      "Description": "Specifies if the Public Subnet A to be provisioned or not",
+      "Type": "String"
+    },
+    "EnablePublicAzBEc2Subnet": {
+      "AllowedValues": [
+        "True",
+        "False"
+      ],
+      "Default": "False",
+      "Description": "Specifies if the Public Subnet A to be provisioned or not",
+      "Type": "String"
+    },
+    "EnablePublicAzCEc2Subnet": {
+      "AllowedValues": [
+        "True",
+        "False"
+      ],
+      "Default": "False",
+      "Description": "Specifies if the Public Subnet A to be provisioned or not",
+      "Type": "String"
+    }
+  },
+  "Mappings": {
+    "RegionToAvailabilityZoneMap" : {
+      "us-east-1" : {
+        "Aza" : "a", "Azb" : "b", "Azc": "c"
+      },
+      "us-east-2" : {
+        "Aza" : "a", "Azb" : "b", "Azc": "c"
+      },
+      "us-west-2" : {
+        "Aza" : "a", "Azb" : "b", "Azc": "c"
+      },
+      "ap-southeast-3" : {
+        "Aza" : "a", "Azb" : "b", "Azc": "c"
+      },
+      "ap-south-1" : {
+        "Aza" : "a", "Azb" : "b", "Azc": "c"
+      },
+      "ap-northeast-2" : {
+        "Aza" : "a", "Azb" : "b", "Azc": "c"
+      },
+      "me-central-1" : {
+        "Aza" : "a", "Azb" : "b", "Azc": "c"
+      },
+      "eu-west-1" : {
+        "Aza" : "a", "Azb" : "b", "Azc": "c"
+      },
+      "ap-southeast-1" : {
+        "Aza" : "a", "Azb" : "b", "Azc": "c"
+      }
+    }
+  },
+  "Metadata": {
+    "AWS::CloudFormation::Interface": {
+      "ParameterGroups": [
+        {
+          "Label": {
+            "default": "Network Stack Configuration"
+          },
+          "Parameters": [
+            "NetworkStack"
+          ]
+        },
+        {
+          "Label": {
+            "default": "Availability Zone A Configuration"
+          },
+          "Parameters": [
+            "EnablePublicAzAEc2Subnet",
+            "PublicAzAEc2SubnetCidr"
+          ]
+        },
+        {
+          "Label": {
+            "default": "Availability Zone B Configuration"
+          },
+          "Parameters": [
+            "EnablePublicAzBEc2Subnet",
+            "PublicAzBEc2SubnetCidr"
+          ]
+        },
+        {
+          "Label": {
+            "default": "Availability Zone C Configuration"
+          },
+          "Parameters": [
+            "EnablePublicAzCEc2Subnet",
+            "PublicAzCEc2SubnetCidr"
+          ]
+        }
+      ],
+      "ParameterLabels": {
+        "NetworkStack": {
+          "default": "NetworkStack stack name"
+        },
+        "PublicAzAEc2SubnetCidr": {
+          "default": "Availability zone A Subnet CIDR"
+        },
+        "PublicAzBEc2SubnetCidr": {
+          "default": "Availability zone B Subnet CIDR"
+        },
+        "PublicAzCEc2SubnetCidr": {
+          "default": "Availability zone C Subnet CIDR"
+        },
+        "EnablePublicAzAEc2Subnet": {
+          "default": "Enable Or Disable Availability zone A Public Subnet"
+        },
+        "EnablePublicAzBEc2Subnet": {
+          "default": "Enable Or Disable Availability zone B Public Subnet"
+        },
+        "EnablePublicAzCEc2Subnet": {
+          "default": "Enable Or Disable Availability zone C Public Subnet"
+        }
+      }
+    }
+  },
+  "Conditions": {
+    "IsPublicAzAEc2SubnetEnabled": {
+      "Fn::Equals": [
+        {
+          "Ref": "EnablePublicAzAEc2Subnet"
+        },
+        "True"
+      ]
+    },
+    "IsPublicAzBEc2SubnetEnabled": {
+      "Fn::Equals": [
+        {
+          "Ref": "EnablePublicAzBEc2Subnet"
+        },
+        "True"
+      ]
+    },
+    "IsPublicAzCEc2SubnetEnabled": {
+      "Fn::Equals": [
+        {
+          "Ref": "EnablePublicAzCEc2Subnet"
+        },
+        "True"
+      ]
+    }
+  },
+  "Resources": {
+    "PublicAzAEc2RouteTable": {
+      "Condition": "IsPublicAzAEc2SubnetEnabled",
+      "Properties": {
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      },
+      "Type": "AWS::EC2::RouteTable"
+    },
+    "PublicAzAEc2Route": {
+      "Condition": "IsPublicAzAEc2SubnetEnabled",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-InternetGatewayId"
+          }
+        },
+        "RouteTableId": {
+          "Ref": "PublicAzAEc2RouteTable"
+        }
+      },
+      "Type": "AWS::EC2::Route"
+    },
+    "PublicAzAEc2Subnet": {
+      "Condition": "IsPublicAzAEc2SubnetEnabled",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::Region"
+              },
+              {
+                "Fn::FindInMap": [
+                  "RegionToAvailabilityZoneMap",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  "Aza"
+                ]
+              }
+            ]
+          ]
+        },
+        "CidrBlock": {
+          "Fn::Join": [
+            ".",
+            [
+              {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${NetworkStack}-VpcNetworkPrefix"
+                }
+              },
+              {
+                "Ref": "PublicAzAEc2SubnetCidr"
+              }
+            ]
+          ]
+        },
+        "MapPublicIpOnLaunch": false,
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      },
+      "Type": "AWS::EC2::Subnet"
+    },
+    "PublicAzAEc2SubnetRouteTableAssociation": {
+      "Condition": "IsPublicAzAEc2SubnetEnabled",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicAzAEc2RouteTable"
+        },
+        "SubnetId": {
+          "Ref": "PublicAzAEc2Subnet"
+        }
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation"
+    },
+    "PublicAzAEc2SubnetS3GatewayEc2VpcEndpoint": {
+      "Condition": "IsPublicAzAEc2SubnetEnabled",
+      "Properties": {
+        "RouteTableIds": [
+          {
+            "Ref": "PublicAzAEc2RouteTable"
+          }
+        ],
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+        },
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      },
+      "Type": "AWS::EC2::VPCEndpoint"
+    },
+
+    "PublicAzBEc2RouteTable": {
+      "Condition": "IsPublicAzBEc2SubnetEnabled",
+      "Properties": {
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      },
+      "Type": "AWS::EC2::RouteTable"
+    },
+    "PublicAzBEc2Route": {
+      "Condition": "IsPublicAzBEc2SubnetEnabled",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-InternetGatewayId"
+          }
+        },
+        "RouteTableId": {
+          "Ref": "PublicAzBEc2RouteTable"
+        }
+      },
+      "Type": "AWS::EC2::Route"
+    },
+    "PublicAzBEc2Subnet": {
+      "Condition": "IsPublicAzBEc2SubnetEnabled",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::Region"
+              },
+              {
+                "Fn::FindInMap": [
+                  "RegionToAvailabilityZoneMap",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  "Azb"
+                ]
+              }
+            ]
+          ]
+        },
+        "CidrBlock": {
+          "Fn::Join": [
+            ".",
+            [
+              {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${NetworkStack}-VpcNetworkPrefix"
+                }
+              },
+              {
+                "Ref": "PublicAzBEc2SubnetCidr"
+              }
+            ]
+          ]
+        },
+        "MapPublicIpOnLaunch": false,
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      },
+      "Type": "AWS::EC2::Subnet"
+    },
+    "PublicAzBEc2SubnetRouteTableAssociation": {
+      "Condition": "IsPublicAzBEc2SubnetEnabled",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicAzBEc2RouteTable"
+        },
+        "SubnetId": {
+          "Ref": "PublicAzBEc2Subnet"
+        }
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation"
+    },
+    "PublicAzBEc2SubnetS3GatewayEc2VpcEndpoint": {
+      "Condition": "IsPublicAzBEc2SubnetEnabled",
+      "Properties": {
+        "RouteTableIds": [
+          {
+            "Ref": "PublicAzBEc2RouteTable"
+          }
+        ],
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+        },
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      },
+      "Type": "AWS::EC2::VPCEndpoint"
+    },
+
+    "PublicAzCEc2RouteTable": {
+      "Condition": "IsPublicAzCEc2SubnetEnabled",
+      "Properties": {
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      },
+      "Type": "AWS::EC2::RouteTable"
+    },
+    "PublicAzCEc2Route": {
+      "Condition": "IsPublicAzCEc2SubnetEnabled",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-InternetGatewayId"
+          }
+        },
+        "RouteTableId": {
+          "Ref": "PublicAzCEc2RouteTable"
+        }
+      },
+      "Type": "AWS::EC2::Route"
+    },
+    "PublicAzCEc2Subnet": {
+      "Condition": "IsPublicAzCEc2SubnetEnabled",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::Region"
+              },
+              {
+                "Fn::FindInMap": [
+                  "RegionToAvailabilityZoneMap",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  "Azc"
+                ]
+              }
+            ]
+          ]
+        },
+        "CidrBlock": {
+          "Fn::Join": [
+            ".",
+            [
+              {
+                "Fn::ImportValue": {
+                  "Fn::Sub": "${NetworkStack}-VpcNetworkPrefix"
+                }
+              },
+              {
+                "Ref": "PublicAzCEc2SubnetCidr"
+              }
+            ]
+          ]
+        },
+        "MapPublicIpOnLaunch": false,
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      },
+      "Type": "AWS::EC2::Subnet"
+    },
+    "PublicAzCEc2SubnetRouteTableAssociation": {
+      "Condition": "IsPublicAzCEc2SubnetEnabled",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicAzCEc2RouteTable"
+        },
+        "SubnetId": {
+          "Ref": "PublicAzCEc2Subnet"
+        }
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation"
+    },
+    "PublicAzCEc2SubnetS3GatewayEc2VpcEndpoint": {
+      "Condition": "IsPublicAzCEc2SubnetEnabled",
+      "Properties": {
+        "RouteTableIds": [
+          {
+            "Ref": "PublicAzCEc2RouteTable"
+          }
+        ],
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+        },
+        "VpcId": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${NetworkStack}-VpcId"
+          }
+        }
+      },
+      "Type": "AWS::EC2::VPCEndpoint"
+    }
+  },
+  "Outputs": {
+    "PublicAzAEc2SubnetId": {
+      "Condition": "IsPublicAzAEc2SubnetEnabled",
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-PublicAzAEc2SubnetId"
+        }
+      },
+      "Value": {
+        "Ref": "PublicAzAEc2Subnet"
+      }
+    },
+    "PublicAzBEc2SubnetId": {
+      "Condition": "IsPublicAzBEc2SubnetEnabled",
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-PublicAzBEc2SubnetId"
+        }
+      },
+      "Value": {
+        "Ref": "PublicAzBEc2Subnet"
+      }
+    },
+    "PublicAzCEc2SubnetId": {
+      "Condition": "IsPublicAzCEc2SubnetEnabled",
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-PublicAzCEc2SubnetId"
+        }
+      },
+      "Value": {
+        "Ref": "PublicAzCEc2Subnet"
+      }
+    },
+
+    "PublicAzAEc2RouteTableId": {
+      "Condition": "IsPublicAzAEc2SubnetEnabled",
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-PublicAzAEc2RouteTableId"
+        }
+      },
+      "Value": {
+        "Ref": "PublicAzAEc2RouteTable"
+      }
+    },
+    "PublicAzBEc2RouteTableId": {
+      "Condition": "IsPublicAzBEc2SubnetEnabled",
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-PublicAzBEc2RouteTableId"
+        }
+      },
+      "Value": {
+        "Ref": "PublicAzBEc2RouteTable"
+      }
+    },
+    "PublicAzCEc2RouteTableId": {
+      "Condition": "IsPublicAzCEc2SubnetEnabled",
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-PublicAzCEc2RouteTableId"
+        }
+      },
+      "Value": {
+        "Ref": "PublicAzCEc2RouteTable"
+      }
+    }
+  }
+}

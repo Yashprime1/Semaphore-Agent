@@ -20,6 +20,12 @@
       },
       "Type": "AWS::S3::Bucket"
     },
+    "SemaphoreAgentEcrRepository": {
+      "Type": "AWS::ECR::Repository",
+      "Properties": {
+        "RepositoryName": "semaphore-agent"
+      }
+    },
     "SemaphoreCachingS3Bucket": {
       "Properties": {
         "PublicAccessBlockConfiguration": {
@@ -39,40 +45,6 @@
         }
       },
       "Type": "AWS::S3::Bucket"
-    },
-    "SemaphoreAuditLogsS3Bucket": {
-      "Properties": {
-        "PublicAccessBlockConfiguration": {
-          "BlockPublicAcls": true,
-          "BlockPublicPolicy": true,
-          "IgnorePublicAcls": true,
-          "RestrictPublicBuckets": true
-        },
-        "BucketEncryption": {
-          "ServerSideEncryptionConfiguration": [
-            {
-              "ServerSideEncryptionByDefault": {
-                "SSEAlgorithm": "AES256"
-              }
-            }
-          ]
-        },
-        "LifecycleConfiguration": {
-          "Rules": [
-            {
-              "ExpirationInDays": 30,
-              "Status": "Enabled"
-            }
-          ]
-        }
-      },
-      "Type": "AWS::S3::Bucket"
-    },
-    "SemaphoreAgentEcrRepository": {
-      "Type": "AWS::ECR::Repository",
-      "Properties": {
-        "RepositoryName": "semaphore-agent"
-      }
     },
     "PackerEc2InstanceIamRole": {
       "Type": "AWS::IAM::Role",
@@ -331,6 +303,15 @@
         },
         "SecretString": "{\"splunk-token\":\"replacesplunktoken\"}"
       }
+    },    
+    "TerraformAgentApiKeySecretsManagerSecret":  {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": {
+          "Fn::Sub": "This is a Secrets Manager secret for ${AWS::StackName}-TerraformAgentApiKeySecretsManagerSecret"
+        },
+        "SecretString": "replacewithTerraformAgentApiKey"
+      }
     }
   },
   "Outputs": {
@@ -370,29 +351,6 @@
         ]
       }
     },
-    "SemaphoreAuditLogsS3BucketName": {
-      "Export": {
-        "Name": {
-          "Fn::Sub": "${AWS::StackName}-SemaphoreAuditLogsS3BucketName"
-        }
-      },
-      "Value": {
-        "Ref": "SemaphoreAuditLogsS3Bucket"
-      }
-    },
-    "SemaphoreAuditLogsS3BucketArn": {
-      "Export": {
-        "Name": {
-          "Fn::Sub": "${AWS::StackName}-SemaphoreAuditLogsS3BucketArn"
-        }
-      },
-      "Value": {
-        "Fn::GetAtt": [
-          "SemaphoreAuditLogsS3Bucket",
-          "Arn"
-        ]
-      }
-    },
     "ArtifactoryDockerUserCredentialsSecretsManagerSecretArn": {
       "Export": {
         "Name": {
@@ -411,6 +369,16 @@
       },
       "Value": {
         "Ref": "SplunkTokenSecretsManagerSecret"
+      }
+    },
+    "TerraformAgentApiSecretsManagerSecretArn": {
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-TerraformAgentApiKeySecretsManagerSecretArn"
+        }
+      },
+      "Value": {
+        "Ref": "TerraformAgentApiKeySecretsManagerSecret"
       }
     }
   }

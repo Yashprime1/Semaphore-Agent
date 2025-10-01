@@ -41,6 +41,32 @@ jobs:
           pip3 install pytablewriter pyyaml
           deactivate
 
+      - name: Install Java 17 
+        run: |
+          set -euxo pipefail
+          CORRETTO_VERSION="17.0.1.12.1"
+          wget -O /tmp/corretto-17.tar.gz "https://corretto.aws/downloads/resources/${CORRETTO_VERSION}/amazon-corretto-${CORRETTO_VERSION}-linux-x64.tar.gz"
+          sudo tar -xzf /tmp/corretto-17.tar.gz -C /opt
+          EXTRACTED_DIR=$(ls -d /opt/amazon-corretto-17*-linux-x64 | head -1)
+          sudo ln -sf "$EXTRACTED_DIR" /opt/amazon-corretto-17-linux-x64
+          export JAVA_HOME=/opt/amazon-corretto-17-linux-x64
+          export PATH=$JAVA_HOME/bin:$PATH
+          rm -f /tmp/corretto-17.tar.gz
+
+      - name: Install cdk
+        run: |
+          set -euxo pipefail
+          npm install -g cdk@2.1014.0
+      
+      - name: Build cdk
+        run: |
+          set -euxo pipefail
+          (
+            cd cdk
+            mvn clean compile
+            cdk synth
+          )
+  
 
       - name: Make cfstack executable
         run: |
