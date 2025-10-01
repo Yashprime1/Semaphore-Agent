@@ -115,7 +115,7 @@ public class TerraformAgentServiceStack extends Stack {
             .essential(true)
             .environment(terraformAgentContainerEnvironment)
             .secrets(terraformAgentContainerSecrets)
-            .image(ContainerImage.fromRegistry(TerraformAgentServiceStackProps.getNetworkStack() + ".registry.clevertap-internal.io/docker/hashicorp/tfc-agent:" + TerraformAgentContainerTag.getValueAsString(), RepositoryImageProps.builder()
+            .image(ContainerImage.fromRegistry("artifactory.clevertap.net/docker/hashicorp/tfc-agent:" + TerraformAgentContainerTag.getValueAsString(), RepositoryImageProps.builder()
                     .credentials(artifactoryDockerUserCredentials)
                     .build()))
             .logging(SplunkLogDriver.Builder.create()
