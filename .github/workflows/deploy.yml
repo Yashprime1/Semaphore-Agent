@@ -1,0 +1,73 @@
+name: Deploy
+
+on:
+  release:
+    types: [published]
+
+env:
+  AWS_REGION: ap-northeast-2
+  JSII_SILENCE_WARNING_DEPRECATED_NODE_VERSION: "1"
+
+jobs:
+  deploy:
+    concurrency: production-deployment
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.run_attempt == 1
+
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1.8.0
+        with:
+          app_id: ${{ secrets.CLEVERTAP_SNE_BOT_ID }}
+          private_key: ${{ secrets.CLEVERTAP_SNE_BOT_PRIVATE_ACCESS_KEY }}
+
+      - name: Download Release Asset
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ github.event.release.tag_name }}
+          fileName: cdk-build-artifact.zip
+          token: ${{ steps.generate_token.outputs.token }}
+
+      - name: Unzip CDK Artifact
+        run: |
+          unzip cdk-build-artifact.zip && rm -rf cdk-build-artifact.zip
+          cd deployment-package
+          ls -la
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install aws-cdk
+        run: npm install -g aws-cdk@2.1029.4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: CDK Deploy
+        id: deploy
+        run: |
+          set -euo pipefail
+          cd deployment-package
+
+          echo "Starting CDK deployment..."
+          
+          cdk deploy --all \
+            --require-approval=never \
+            --verbose \
+            --outputs-file cdk-outputs.json \
+            --app "cdk.out/"
+          
+          echo "CDK deployment completed successfully!"
