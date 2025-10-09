@@ -28,7 +28,7 @@ jobs:
           private_key: ${{ secrets.DUMMY_BOT_PRIVATE_ACCESS_KEY }}
 
       - name: Download Release Asset
-        uses: robinraju/release-downloader@v1.11
+        uses: robinraju/release-downloader@v1.8
         with:
           repository: ${{ github.repository }}
           tag: ${{ github.event.release.tag_name }}
