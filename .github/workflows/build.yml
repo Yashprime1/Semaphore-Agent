@@ -2,7 +2,7 @@ name: Build CDK
 run-name: ${{ github.ref_name }}-${{ github.run_number }}
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 env:
@@ -134,7 +134,7 @@ jobs:
           output_text_description_file: ${{ env.MODULE_NAME }}/cdk-diff.txt
 
       - name: Create CDK build asset
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master'
         working-directory: ${{ env.MODULE_NAME }}
         run: |
           set -euo pipefail
@@ -146,7 +146,7 @@ jobs:
           zip -r cdk-build-artifact.zip deployment-package/
           ls -la cdk-build-artifact.zip
       - name: Create Draft Release
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master'
         id: create_release
         uses: actions/create-release@v1.1.4
         env:
@@ -158,7 +158,7 @@ jobs:
           prerelease: false
 
       - name: Upload CDK Artifact to Release
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master'
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
@@ -169,7 +169,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Delete older drafted releases
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master'
         uses: sgpublic/delete-release-action@v1.1
         with:
           draft-drop: true
@@ -178,7 +178,7 @@ jobs:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
 
       - name: Publish release instructions
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master'
         run: |
           set -euo pipefail
           echo "Draft release created successfully!"
