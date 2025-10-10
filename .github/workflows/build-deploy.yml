@@ -1,0 +1,190 @@
+name: build-deploy
+
+run-name: build-deploy-${{ github.ref_name }}-${{ github.run_number }}
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: 
+      - opened
+      - synchronize
+      - reopened
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  MODULE_NAME: n8n
+
+jobs:
+  build:
+    concurrency:
+     group: build-${{ github.ref_name }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.DUMMY_BOT_ID }}
+          private_key: ${{ secrets.DUMMY_BOT_PRIVATE_ACCESS_KEY }}
+
+      - name: Checkout repo
+        uses: actions/checkout@v5
+        with:
+          show-progress: false
+
+      - name: Merge changes from the default branch into the current branch
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --unshallow --quiet
+          git merge origin/main --no-edit
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'corretto'
+          java-version: '17'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+
+      - name: Install aws-cdk
+        run: |
+          set -euo pipefail
+          npm install -g aws-cdk@2.1029.4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4.3.0
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build CDK App
+        working-directory: ${{ env.MODULE_NAME }}
+        run: |
+          set -euo pipefail
+          mvn -B compile --no-transfer-progress
+
+      - name: CDK diff
+        working-directory: ${{ env.MODULE_NAME }}
+        run: |
+          set -euo pipefail
+          echo "Running CDK diff for ${{ env.MODULE_NAME }}"
+          cdk diff --ci --no-color --all > cdk-diff-raw.txt 2>&1 || true
+          CHANGED_STACKS=$(grep "Number of stacks with differences:" cdk-diff-raw.txt | grep -o '[0-9]\+' || echo "0")
+          echo "changed_stacks=$CHANGED_STACKS" >> $GITHUB_OUTPUT
+          echo "Changes detected in $CHANGED_STACKS stacks"
+          
+          if [ "$CHANGED_STACKS" -gt 0 ]; then
+            awk '
+            /^Stack/ {
+              stack_line = $0
+              getline
+              if ($0 != "There were no differences") {
+                print stack_line 
+              }
+            }
+            /^Resources/ {
+              print 
+              while(getline) {
+                if(NF==0) {
+                  print ""
+                  break
+                } else {
+                  print 
+                }
+              }
+            }' cdk-diff-raw.txt > cdk-diff.txt
+            echo "Changes to $CHANGED_STACKS stacks detected"
+          else
+            echo "No diff detected" > cdk-diff.txt
+            echo "No diff detected"
+          fi
+          
+          echo "CDK Diff output:"
+          cat cdk-diff.txt
+
+      - name: Add changeset as check to the pull request
+        if: github.event_name == 'pull_request'
+        uses: LouisBrunner/checks-action@v2.0.0
+        with:
+          token: ${{ steps.generate_token.outputs.token }}
+          name: "diff-summary"
+          conclusion: "success"
+          output: |
+            {"title": "Changeset", "summary": ""}
+          output_text_description_file: ${{ env.MODULE_NAME }}/cdk-diff.txt
+
+      - name: Upload build artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudformation-assets
+          path: |
+            ${{ env.MODULE_NAME }}/cdk.out/*
+            ${{ env.MODULE_NAME }}/cdk.json
+            ${{ env.MODULE_NAME }}/pom.xml
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    concurrency:
+     group: deployment
+
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'corretto'
+          java-version: '17'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+
+      - name: Install aws-cdk
+        run: |
+          set -euo pipefail
+          npm install -g aws-cdk@2.1029.4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: cloudformation-assets
+          path: .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: CDK Deploy
+        run: |
+          set -euo pipefail
+          echo "Starting CDK deployment..."
+          cdk deploy --all --app "cdk.out/" --require-approval=never
+          echo "CDK deployment completed successfully!"
