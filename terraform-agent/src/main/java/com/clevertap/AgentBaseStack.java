@@ -6,7 +6,9 @@ import software.amazon.awscdk.StackProps;
 import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.services.secretsmanager.Secret;
 import software.constructs.Construct;
+import lombok.Getter;
 
+@Getter
 public class AgentBaseStack extends Stack {
 
   private final Secret splunkHecToken;
@@ -30,17 +32,5 @@ public class AgentBaseStack extends Stack {
     this.cluster = Cluster.Builder.create(this, "AgentServiceEc2Cluster")
         .vpc(agentBaseStack.getVpc())
         .build();
-  }
-
-  public Secret getSplunkHecToken() {
-    return splunkHecToken;
-  }
-
-  public Cluster getCluster() {
-    return cluster;
-  }
-
-  public Secret getTfcAgentToken() {
-    return tfcAgentToken;
   }
 }
