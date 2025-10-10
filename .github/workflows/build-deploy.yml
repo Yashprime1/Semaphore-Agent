@@ -17,7 +17,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  MODULE_NAME: n8n
+  MODULE_NAME: terraform-agent
 
 jobs:
   build:
