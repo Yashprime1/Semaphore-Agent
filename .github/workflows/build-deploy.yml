@@ -5,14 +5,14 @@ run-name: build-deploy-${{ github.ref_name }}-${{ github.run_number }}
 on:
   pull_request:
     branches:
-      - main
+      - master
     types: 
       - opened
       - synchronize
       - reopened
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 env:
@@ -45,7 +45,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch --unshallow --quiet
-          git merge origin/main --no-edit
+          git merge origin/master --no-edit
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -134,7 +134,7 @@ jobs:
           output_text_description_file: ${{ env.MODULE_NAME }}/cdk-diff.txt
 
       - name: Upload build artifact
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
         with:
           name: cloudformation-assets
@@ -144,7 +144,7 @@ jobs:
             ${{ env.MODULE_NAME }}/pom.xml
 
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master'
     concurrency:
      group: deployment
 
