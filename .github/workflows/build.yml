@@ -1,0 +1,187 @@
+name: Build CDK
+run-name: ${{ github.ref_name }}-${{ github.run_number }}
+on:
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-2
+  JSII_SILENCE_WARNING_DEPRECATED_NODE_VERSION: "1"
+  MODULE_NAME: terraform-agent
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.DUMMY_BOT_ID }}
+          private_key: ${{ secrets.DUMMY_BOT_PRIVATE_ACCESS_KEY }}
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Get current date
+        id: get-date
+        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'corretto'
+          java-version: '17'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install aws-cdk
+        run: npm install -g aws-cdk@2.1029.4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build CDK App
+        working-directory: ${{ env.MODULE_NAME }}
+        run: |
+          mvn compile
+
+      - name: CDK Bootstrap (if needed)
+        working-directory: ${{ env.MODULE_NAME }}
+        run: |
+          if ! aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+            echo "Bootstrapping CDK environment..."
+            cdk bootstrap aws://$(aws sts get-caller-identity --query Account --output text)/${{ env.AWS_REGION }}
+            echo "CDK environment bootstrapped successfully"
+          else
+            echo "CDK environment already bootstrapped"
+          fi
+
+      - name: CDK synth
+        working-directory: ${{ env.MODULE_NAME }}
+        run: |
+          cdk synth --all --output cdk.out
+
+      - name: CDK diff
+        id: diff
+        working-directory: ${{ env.MODULE_NAME }}
+        run: |
+          set -euo pipefail
+          echo "Running CDK diff for ${{ env.MODULE_NAME }}"
+          cdk diff --ci --no-color --all > cdk-diff-raw.txt 2>&1 || true
+          CHANGED_STACKS=$(grep "Number of stacks with differences:" cdk-diff-raw.txt | grep -o '[0-9]\+' || echo "0")
+          echo "changed_stacks=$CHANGED_STACKS" >> $GITHUB_OUTPUT
+          echo "Changes detected in $CHANGED_STACKS stacks"
+          
+          if [ "$CHANGED_STACKS" -gt 0 ]; then
+            awk '
+            /^Stack/ {
+              stack_line = $0
+              getline
+              if ($0 != "There were no differences") {
+                print stack_line 
+              }
+            }
+            /^Resources/ {
+              print 
+              while(getline) {
+                if(NF==0) {
+                  print ""
+                  break
+                } else {
+                  print 
+                }
+              }
+            }' cdk-diff-raw.txt > cdk-diff.txt
+            echo "Changes to $CHANGED_STACKS stacks detected"
+          else
+            echo "No diff detected" > cdk-diff.txt
+            echo "No diff detected"
+          fi
+          
+          echo "CDK Diff output:"
+          cat cdk-diff.txt
+
+      - name: Add changeset as check to the pull request
+        if: github.event_name == 'pull_request'
+        uses: LouisBrunner/checks-action@v2.0.0
+        with:
+          token: ${{ steps.generate_token.outputs.token }}
+          name: "diff-summary"
+          conclusion: "success"
+          output: |
+            {"title": "Changeset", "summary": ""}
+          output_text_description_file: ${{ env.MODULE_NAME }}/cdk-diff.txt
+
+      - name: Create CDK build asset
+        if: github.ref == 'refs/heads/master'
+        working-directory: ${{ env.MODULE_NAME }}
+        run: |
+          set -euo pipefail
+          mkdir -p deployment-package
+          cp -r cdk.out deployment-package/
+          cp cdk-diff.txt deployment-package/
+          cp cdk.json deployment-package/
+          cp pom.xml deployment-package/
+          zip -r cdk-build-artifact.zip deployment-package/
+          ls -la cdk-build-artifact.zip
+      - name: Create Draft Release
+        if: github.ref == 'refs/heads/master'
+        id: create_release
+        uses: actions/create-release@v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+        with:
+          tag_name: v${{ steps.get-date.outputs.date }}.${{ github.run_number }}
+          release_name: CDK Release v${{ steps.get-date.outputs.date }}.${{ github.run_number }}
+          draft: true
+          prerelease: false
+
+      - name: Upload CDK Artifact to Release
+        if: github.ref == 'refs/heads/master'
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.MODULE_NAME }}/cdk-build-artifact.zip
+          asset_name: cdk-build-artifact.zip
+          asset_content_type: application/zip
+
+      - name: Delete older drafted releases
+        if: github.ref == 'refs/heads/master'
+        uses: sgpublic/delete-release-action@v1.1
+        with:
+          draft-drop: true
+          draft-drop-count: 0
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+
+      - name: Publish release instructions
+        if: github.ref == 'refs/heads/master'
+        run: |
+          set -euo pipefail
+          echo "Draft release created successfully!"
+          echo "You can publish the release from here: ${{ steps.create_release.outputs.html_url }}"
+          echo "Publishing the release will trigger the deployment pipeline"
+

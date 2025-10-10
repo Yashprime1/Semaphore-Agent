@@ -1,0 +1,95 @@
+name: Deploy CDK
+
+on:
+  release:
+    types: [published]
+
+env:
+  AWS_REGION: ap-northeast-2
+  JSII_SILENCE_WARNING_DEPRECATED_NODE_VERSION: "1"
+
+jobs:
+  deploy:
+    concurrency: production-deployment
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.run_attempt == 1
+
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1.8.0
+        with:
+          app_id: ${{ secrets.DUMMY_BOT_ID }}
+          private_key: ${{ secrets.DUMMY_BOT_PRIVATE_ACCESS_KEY }}
+
+      - name: Check for CDK Asset
+        id: check_cdk_asset
+        run: |
+          # Check if cdk-build-artifact.zip exists in the release assets
+          asset_exists=$(curl -s -H "Authorization: token ${{ steps.generate_token.outputs.token }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.event.release.tag_name }}" \
+            | jq -r '.assets[] | select(.name == "cdk-build-artifact.zip") | .name')
+          
+          if [ "$asset_exists" = "cdk-build-artifact.zip" ]; then
+            echo "CDK asset found, proceeding with deployment"
+            echo "asset_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "CDK asset not found, skipping deployment"
+            echo "asset_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download Release Asset
+        if: steps.check_cdk_asset.outputs.asset_found == 'true'
+        uses: robinraju/release-downloader@v1.8
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ github.event.release.tag_name }}
+          fileName: cdk-build-artifact.zip
+          token: ${{ steps.generate_token.outputs.token }}
+
+      - name: Unzip CDK Artifact
+        if: steps.check_cdk_asset.outputs.asset_found == 'true'
+        run: |
+          unzip cdk-build-artifact.zip && rm -rf cdk-build-artifact.zip
+          cd deployment-package
+          ls -la
+
+      - name: Setup Node.js
+        if: steps.check_cdk_asset.outputs.asset_found == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install aws-cdk
+        if: steps.check_cdk_asset.outputs.asset_found == 'true'
+        run: npm install -g aws-cdk@2.1029.4
+
+      - name: Configure AWS credentials
+        if: steps.check_cdk_asset.outputs.asset_found == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.BUILD_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BUILD_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: CDK Deploy
+        if: steps.check_cdk_asset.outputs.asset_found == 'true'
+        id: deploy
+        run: |
+          set -euo pipefail
+          cd deployment-package
+
+          echo "Starting CDK deployment..."
+          
+          cdk deploy --all \
+            --require-approval=never \
+            --verbose \
+            --outputs-file cdk-outputs.json \
+            --app "cdk.out/"
+          
+          echo "CDK deployment completed successfully!"
