@@ -1,8 +1,8 @@
 name: cfstack-deploy
 
 on:
-#   release:
-#     types: [published]
+  release:
+    types: [published]
   workflow_dispatch:
 jobs:
   deploy:
@@ -17,7 +17,24 @@ jobs:
           app_id: ${{ secrets.DUMMY_BOT_ID }}
           private_key: ${{ secrets.DUMMY_BOT_PRIVATE_ACCESS_KEY }}
 
+      - name: Check for CloudFormation Asset
+        id: check_cfstack_asset
+        run: |
+          # Check if cloudformation-build.zip exists in the release assets
+          asset_exists=$(curl -s -H "Authorization: token ${{ steps.generate-github-token.outputs.token }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.event.release.tag_name }}" \
+            | jq -r '.assets[] | select(.name == "cloudformation-build.zip") | .name')
+          
+          if [ "$asset_exists" = "cloudformation-build.zip" ]; then
+            echo "CloudFormation asset found, proceeding with deployment"
+            echo "asset_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "CloudFormation asset not found, skipping deployment"
+            echo "asset_found=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Download asset
+        if: steps.check_cfstack_asset.outputs.asset_found == 'true'
         uses: robinraju/release-downloader@v1.11
         with:
           repository: ${{ github.repository }}
@@ -26,16 +43,19 @@ jobs:
           token: ${{ steps.generate-github-token.outputs.token }}
 
       - name: Unzip Asset
+        if: steps.check_cfstack_asset.outputs.asset_found == 'true'
         run: |
           set -euxo pipefail
           unzip -q cloudformation-build.zip && rm -rf cloudformation-build.zip
 
       - name: Make cfstack executable
+        if: steps.check_cfstack_asset.outputs.asset_found == 'true'
         run: |
           set -euxo pipefail
           chmod +x ./cfstack
 
       - name: Deploy cfstack diff
+        if: steps.check_cfstack_asset.outputs.asset_found == 'true'
         run: |
           set -euxo pipefail
           ./cfstack deploy --manifest diff.json --values values.json --role ${{ secrets.BUILD_AWS_CLOUDFORMATION_SERVICE_IAM_ROLE }}
