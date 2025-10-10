@@ -75,7 +75,7 @@ public class AgentServiceStack extends Stack {
             /*.logging()
 
              */
-            .memoryReservationMiB(256)
+            .memoryReservationMiB(512)
             .containerName(Aws.STACK_NAME + "TfAgent")
             .privileged(false)
             .readonlyRootFilesystem(false)
