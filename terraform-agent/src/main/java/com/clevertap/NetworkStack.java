@@ -1,8 +1,7 @@
 package com.clevertap;
 
-import java.util.ArrayList;
-import java.util.List;
-import software.amazon.awscdk.services.ec2.ISubnet;
+import software.amazon.awscdk.services.ec2.CfnEIP;
+import software.amazon.awscdk.services.ec2.CfnEIPAssociation;
 import software.amazon.awscdk.services.ec2.Instance;
 import software.amazon.awscdk.services.ec2.InstanceType;
 import software.amazon.awscdk.services.ec2.IpAddresses;
@@ -12,10 +11,6 @@ import software.amazon.awscdk.services.ec2.NatTrafficDirection;
 import software.amazon.awscdk.services.ec2.Peer;
 import software.amazon.awscdk.services.ec2.Port;
 import software.amazon.awscdk.services.ec2.SecurityGroup;
-import software.amazon.awscdk.services.ec2.SelectedSubnets;
-import software.amazon.awscdk.services.ec2.Subnet;
-import software.amazon.awscdk.services.ec2.SubnetSelection;
-import software.amazon.awscdk.services.ec2.SubnetType;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.constructs.Construct;
 import software.amazon.awscdk.Stack;
@@ -55,8 +50,20 @@ public class NetworkStack extends Stack {
 
     natInstanceSecurityGroup.addIngressRule(Peer.ipv4(vpc.getVpcCidrBlock()), Port.allTcp());
 
-    for (Instance gatewayInstance : natGatewayProvider.getGatewayInstances()) {
+    for (int i = 0; i < natGatewayProvider.getGatewayInstances().size(); i++) {
+      Instance gatewayInstance = natGatewayProvider.getGatewayInstances().get(i);
       gatewayInstance.addSecurityGroup(natInstanceSecurityGroup);
+      
+      // Create Elastic IP for this NAT instance
+      CfnEIP elasticIP = CfnEIP.Builder.create(this, "NatInstanceEIP" + i)
+          .domain("vpc")
+          .build();
+      
+      // Associate Elastic IP with NAT instance
+      CfnEIPAssociation.Builder.create(this, "NatInstanceEIPAssociation" + i)
+          .instanceId(gatewayInstance.getInstanceId())
+          .allocationId(elasticIP.getAttrAllocationId())
+          .build();
     }
   }
 }
