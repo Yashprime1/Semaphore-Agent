@@ -218,6 +218,14 @@
             {
               "Effect": "Allow",
               "Action": [
+                "ecs:GetTaskProtection",
+                "ecs:UpdateTaskProtection"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
                 "ssmmessages:CreateControlChannel",
                 "ssmmessages:CreateDataChannel",
                 "ssmmessages:OpenControlChannel",
