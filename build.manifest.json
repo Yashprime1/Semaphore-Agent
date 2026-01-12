@@ -2,25 +2,6 @@
   "ParallelDeployment": true,
   "Regions": [
     {
-      "Name": "ap-south-1",
-      "Stacks": [
-        {
-          "StackName": "System-IAM",
-          "Action": "CREATE",
-          "TemplatePath": "templates/system/iam/iam.json",
-          "Parameters": {},
-          "StackPolicy": {}
-        },
-        {
-          "StackName": "System-IAM-Users",
-          "Action": "CREATE",
-          "TemplatePath": "templates/system/iam/iam-users.json",
-          "Parameters": {},
-          "StackPolicy": {}
-        }
-      ]
-    },
-    {
       "Name": "eu-west-1",
       "Stacks": [
         {
