@@ -134,6 +134,14 @@
                 "ecr:BatchGetImage"
               ],
               "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ecs:GetTaskProtection",
+                "ecs:UpdateTaskProtection"
+              ],
+              "Resource": "*"
             }
           ]
         },
